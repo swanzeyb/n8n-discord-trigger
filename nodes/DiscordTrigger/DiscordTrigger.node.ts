@@ -89,10 +89,6 @@ export class DiscordTrigger implements INodeType {
             });
         });
 
-        ipc.of.bot.on('error', (err: Error) => {
-            console.error('IPC connection error:', err);
-        });
-
         ipc.of.bot.on('disconnect', () => {
             console.error('Disconnected from IPC server');
         });
