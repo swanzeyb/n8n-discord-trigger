@@ -57,19 +57,9 @@ export const options: INodeProperties[] = [
     },
     options: [
       {
-        name: 'Equals',
-        value: 'equal',
-        description: 'Match the exact same value',
-      },
-      {
-        name: 'Starts With',
-        value: 'start',
-        description: 'Match the message beginning with the specified value',
-      },
-      {
-        name: 'Every',
-        value: 'every',
-        description: 'Triggers on every discord message',
+        name: 'Bot Mention',
+        value: 'botMention',
+        description: 'The bot has to be mentioned somewhere in the message in order to trigger',
       },
       {
         name: 'Contains',
@@ -82,13 +72,25 @@ export const options: INodeProperties[] = [
         description: 'Match the message ending with the specified value',
       },
       {
+        name: 'Equals',
+        value: 'equal',
+        description: 'Match the exact same value',
+      },
+      {
+        name: 'Every',
+        value: 'every',
+        description: 'Triggers on every discord message',
+      },
+     
+      {
         name: 'Regex',
         value: 'regex',
         description: 'Match the custom ECMAScript regex provided',
-      },{
-        name: 'Bot Mention',
-        value: 'botMention',
-        description: 'The bot has to be mentioned somewhere in the message in order to trigger',
+      }, 
+      {
+        name: 'Starts With',
+        value: 'start',
+        description: 'Match the message beginning with the specified value',
       },
     ],
     default: 'start',
@@ -119,7 +121,7 @@ export const options: INodeProperties[] = [
     },
 
     default: false,
-    description: 'Determine if it will be sensible to the case when matching the value',
+    description: 'Whether it will be sensible to the case when matching the value',
   },
   {
     displayName: 'Message ID',
