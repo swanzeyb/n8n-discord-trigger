@@ -119,7 +119,7 @@ export const options: INodeProperties[] = [
     },
 
     default: false,
-    description: 'Determine if it will be sensible to the case when matching the value',
+    description: 'Whether the value will be sensible to the case when matching the value',
   },
   {
     displayName: 'Message ID',
