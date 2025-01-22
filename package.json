@@ -40,19 +40,19 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/DiscordBot.credentials.js"
+      "dist/credentials/DiscordBotTriggerApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Discord/DiscordTrigger.node.js"
+      "dist/nodes/DiscordTrigger.node.js"
     ]
   },
   "devDependencies": {
-    "@types/node-ipc": "^9.2.3",
     "@typescript-eslint/parser": "^7.15.0",
     "eslint": "^8.56.0",
     "eslint-plugin-n8n-nodes-base": "^1.16.1",
     "gulp": "^4.0.2",
     "n8n-workflow": "*",
+    "n8n-core": "^0.125.0",
     "prettier": "^3.3.2",
     "typescript": "^5.5.3"
   },
@@ -60,6 +60,7 @@
     "n8n-workflow": "*"
   },
   "dependencies": {
+    "@types/node-ipc": "^9.2.3",
     "axios": "^1.7.9",
     "discord.js": "^14.17.3",
     "node-ipc": "^12.0.0"

@@ -5,7 +5,6 @@ import type {
     ITriggerResponse,
     INodePropertyOptions,
 } from 'n8n-workflow';
-import { NodeConnectionType } from 'n8n-workflow';
 import { options } from './DiscordTrigger.node.options';
 import bot from './bot';
 import ipc from 'node-ipc';
@@ -34,7 +33,7 @@ export class DiscordTrigger implements INodeType {
         outputs: ['main'],
         credentials: [
             {
-                name: 'discordBotApi',
+                name: 'discordBotTriggerApi',
                 required: true,
             },
         ],
@@ -54,7 +53,7 @@ export class DiscordTrigger implements INodeType {
 
     async trigger(this: ITriggerFunctions): Promise<ITriggerResponse> {
 
-        const credentials = (await this.getCredentials('discordBotApi').catch((e) => e)) as any as ICredentials;
+        const credentials = (await this.getCredentials('discordBotTriggerApi').catch((e) => e)) as any as ICredentials;
 
         if (!credentials?.token) {
             console.log("No token given.");
@@ -99,7 +98,7 @@ export class DiscordTrigger implements INodeType {
         // Return the cleanup function
         return {
             closeFunction: async () => {
-                const credentials = (await this.getCredentials('discordBotApi').catch((e) => e)) as any as ICredentials;
+                const credentials = (await this.getCredentials('discordBotTriggerApi').catch((e) => e)) as any as ICredentials;
                 const isActive = await checkWorkflowStatus(credentials.baseUrl, credentials.apiKey, String(this.getWorkflow().id));
 
                 // disable the node if the workflow is not activated, but keep it running if it was just the test node
