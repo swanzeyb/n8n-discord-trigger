@@ -76,5 +76,5 @@ For more help on setting up n8n workflows, check the [Try it out documentation](
 
 ## Version history
 
-- **v1.0.0**: Initial release with message triggers and channel/role fetching capabilities.
+- **v0.1.3**: Initial release with message triggers and channel/role fetching capabilities.
 
