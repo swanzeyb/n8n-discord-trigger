@@ -38,7 +38,7 @@ export const connection = (credentials: ICredentials): Promise<string> => {
 export const getChannels = async (that: any): Promise<INodePropertyOptions[]> => {
     const endMessage = ' - Close and reopen this node modal once you have made changes.';
 
-    const credentials = await that.getCredentials('discordBotTriggerApi').catch((e: any) => e);
+    const credentials = await that.getCredentials('discordBotApi').catch((e: any) => e);
     const res = await connection(credentials).catch((e) => e);
     if (!['ready', 'already'].includes(res)) {
         return [
@@ -92,7 +92,7 @@ export interface IRole {
 export const getRoles = async (that: any): Promise<INodePropertyOptions[]> => {
     const endMessage = ' - Close and reopen this node modal once you have made changes.';
 
-    const credentials = await that.getCredentials('discordBotTriggerApi').catch((e: any) => e);
+    const credentials = await that.getCredentials('discordBotApi').catch((e: any) => e);
     const res = await connection(credentials).catch((e) => e);
     if (!['ready', 'already'].includes(res)) {
         return [

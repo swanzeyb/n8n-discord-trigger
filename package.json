@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-discord-trigger",
-  "version": "0.1.3",
+  "version": "0.1.0",
   "description": "A node that triggers a workflow whenever a message from discord is sent.",
   "keywords": [
     "n8n",
@@ -40,10 +40,10 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/DiscordBotTriggerApi.credentials.js"
+      "dist/credentials/DiscordBot.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/DiscordTrigger.node.js"
+      "dist/nodes/Discord/DiscordTrigger.node.js"
     ]
   },
   "devDependencies": {

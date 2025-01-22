@@ -1,8 +1,8 @@
 import { ICredentialType, INodeProperties } from 'n8n-workflow';
 
-export class DiscordBotTriggerApi implements ICredentialType {
-	name = 'discordBotTriggerApi';
-	displayName = 'Discord Bot Trigger API';
+export class DiscordBotApi implements ICredentialType {
+	name = 'discordBotApi';
+	displayName = 'Discord Bot API';
 	documentationUrl = 'https://github.com/katerlol/n8n-discord-trigger';
 	properties: INodeProperties[] = [
 		{
