@@ -31,10 +31,10 @@ export class DiscordTrigger implements INodeType {
             name: 'Discord Trigger',
         },
         inputs: [],
-        outputs: [NodeConnectionType.Main],
+        outputs: ['main'],
         credentials: [
             {
-                name: 'discordBot',
+                name: 'discordBotApi',
                 required: true,
             },
         ],
@@ -54,7 +54,7 @@ export class DiscordTrigger implements INodeType {
 
     async trigger(this: ITriggerFunctions): Promise<ITriggerResponse> {
 
-        const credentials = (await this.getCredentials('discordBot').catch((e) => e)) as any as ICredentials;
+        const credentials = (await this.getCredentials('discordBotApi').catch((e) => e)) as any as ICredentials;
 
         if (!credentials?.token) {
             console.log("No token given.");
@@ -99,7 +99,7 @@ export class DiscordTrigger implements INodeType {
         // Return the cleanup function
         return {
             closeFunction: async () => {
-                const credentials = (await this.getCredentials('discordBot').catch((e) => e)) as any as ICredentials;
+                const credentials = (await this.getCredentials('discordBotApi').catch((e) => e)) as any as ICredentials;
                 const isActive = await checkWorkflowStatus(credentials.baseUrl, credentials.apiKey, String(this.getWorkflow().id));
 
                 // disable the node if the workflow is not activated, but keep it running if it was just the test node
