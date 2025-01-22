@@ -57,8 +57,11 @@ export class DiscordTrigger implements INodeType {
         const credentials = (await this.getCredentials('discordBot').catch((e) => e)) as any as ICredentials;
 
         if (!credentials?.token) {
-            throw new Error('No bot token found in credentials.');
+            console.log("No token given.");
+            
+            return {};
         }
+
         await connection(credentials).catch((e) => e);
 
         ipc.connectTo('bot', () => {
