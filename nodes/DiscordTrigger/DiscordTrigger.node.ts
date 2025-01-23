@@ -29,6 +29,7 @@ export class DiscordTrigger implements INodeType {
         defaults: {
             name: 'Discord Trigger',
         },
+        icon: 'file:discord-logo.svg',
         inputs: [],
         outputs: ['main'],
         credentials: [
@@ -86,6 +87,7 @@ export class DiscordTrigger implements INodeType {
                         authorId: author.id,
                         authorName: author.username,
                         timestamp: message.createdTimestamp,
+                        listenValue: this.getNodeParameter('value', ''),
                     }),
                 ]);
             });

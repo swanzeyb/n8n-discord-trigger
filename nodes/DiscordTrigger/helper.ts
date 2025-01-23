@@ -84,6 +84,56 @@ export const getChannels = async (that: any): Promise<INodePropertyOptions[]> =>
     ];
 };
 
+
+export const getGuilds = async (that: any): Promise<INodePropertyOptions[]> => {
+    const endMessage = ' - Close and reopen this node modal once you have made changes.';
+
+    const credentials = await that.getCredentials('discordBotTriggerApi').catch((e: any) => e);
+    const res = await connection(credentials).catch((e) => e);
+    if (!['ready', 'already'].includes(res)) {
+        return [
+            {
+                name: res + endMessage,
+                value: 'false',
+            },
+        ];
+    }
+
+    const guildsRequest = () =>
+        new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve(''), 5000);
+
+            ipc.config.retry = 1500;
+            ipc.connectTo('bot', () => {
+                ipc.of.bot.emit('list:guilds');
+
+                ipc.of.bot.on('list:guilds', (data: { name: string; value: string }[]) => {
+                    clearTimeout(timeout);
+                    resolve(data);
+                });
+            });
+        });
+
+    const guilds = await guildsRequest().catch((e) => e);
+
+    let message = 'Unexpected error';
+
+    if (guilds) {
+        if (Array.isArray(guilds) && guilds.length) return guilds;
+        else
+            message =
+                'Your bot is not part of any guilds. Please add the bot to at least one guild.' +
+                endMessage;
+    }
+
+    return [
+        {
+            name: message,
+            value: 'false',
+        },
+    ];
+};
+
 export interface IRole {
     name: string;
     id: string;
@@ -166,3 +216,19 @@ function removeTrailingSlash(url: String) {
     }
     return url;
 }
+
+
+export const ipcRequest = (type: string, parameters: any): Promise<any> => {
+    return new Promise((resolve) => {
+        ipc.config.retry = 1500;
+        ipc.connectTo('bot', () => {
+            ipc.of.bot.on(`callback:${type}`, (data: any) => {
+                console.log("response fired", data);
+                resolve(data);
+            });
+
+            // send event to bot
+            ipc.of.bot.emit(type, parameters);
+        });
+    });
+};
