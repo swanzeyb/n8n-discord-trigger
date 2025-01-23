@@ -76,6 +76,6 @@ For more help on setting up n8n workflows, check the [Try it out documentation](
 
 ## Version history
 
-- **v0.2.2**: A second node Discord Interaction is added to send a message with the same credentials. Additionally roles of users can be added or removed based on interaction.
+- **v0.2.6**: A second node Discord Interaction is added to send a message with the same credentials. Additionally roles of users can be added or removed based on interaction.
 - **v0.1.5**: Initial release with message triggers and channel/role fetching capabilities.
 

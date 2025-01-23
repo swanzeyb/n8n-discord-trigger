@@ -210,13 +210,6 @@ export const checkWorkflowStatus = async (n8nApiUrl: String, apiToken: String, w
 }
 
 
-function removeTrailingSlash(url: String) {
-    if (url.endsWith('/')) {
-        return url.slice(0, -1);
-    }
-    return url;
-}
-
 
 export const ipcRequest = (type: string, parameters: any): Promise<any> => {
     return new Promise((resolve) => {
@@ -232,3 +225,11 @@ export const ipcRequest = (type: string, parameters: any): Promise<any> => {
         });
     });
 };
+
+
+function removeTrailingSlash(url: String) {
+    if (url.endsWith('/')) {
+        return url.slice(0, -1);
+    }
+    return url;
+}

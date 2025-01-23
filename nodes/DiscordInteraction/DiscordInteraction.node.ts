@@ -6,10 +6,10 @@ import type {
     IExecuteFunctions,
 } from 'n8n-workflow';
 import { options } from './DiscordInteraction.node.options';
+import ipc from 'node-ipc';
 import {
     connection,
     ICredentials,
-    ipcRequest,
     getChannels as getChannelsHelper,
     getRoles as getRolesHelper,
     getGuilds as getGuildsHelper,
@@ -128,10 +128,19 @@ export class DiscordInteraction implements INodeType {
 
             if (nodeParameters.channelId || nodeParameters.executionId) {
                 // return the interaction result if there is one
-                const res = await ipcRequest(
-                    `send:${nodeParameters.type}`,
-                    nodeParameters,
-                ).catch((e) => {
+                const res: any = new Promise((resolve) => {
+                    ipc.config.retry = 1500;
+                    ipc.connectTo('bot', () => {
+                        const type = `send:${nodeParameters.type}`;
+                        ipc.of.bot.on(`callback:${type}`, (data: any) => {
+                            console.log("response fired", data);
+                            resolve(data);
+                        });
+
+                        // send event to bot
+                        ipc.of.bot.emit(type, nodeParameters);
+                    });
+                }).catch((e) => {
                     console.log(e);
                     return this.prepareOutputData(this.getInputData());
                 });
