@@ -4,29 +4,27 @@ export const options: INodeProperties[] = [
     {
         displayName: 'Type',
         name: 'type',
-        required: false,
+
         type: 'options',
         options: [
             {
                 name: 'Action',
                 value: 'action',
-                description:
-                    'Instead of sending a message, it will perform an action defined in the next field.',
+                description: 'Instead of sending a message, it will perform an action defined in the next field',
             },
             {
                 name: 'Message',
                 value: 'message',
-                description:
-                    'This is the default type, it allows you to send a message without requiering any form of response.',
+                description: 'This is the default type, it allows you to send a message without requiering any form of response',
             },
         ],
         default: 'message',
-        description: 'Let you choose the type of interaction you want to perform.',
+        description: 'Let you choose the type of interaction you want to perform',
     },
    {
         displayName: 'Action',
         name: 'actionType',
-        required: false,
+
         displayOptions: {
             show: {
                 type: ['action'],
@@ -35,28 +33,28 @@ export const options: INodeProperties[] = [
         type: 'options',
         options: [
             {
-                name: 'Remove messages',
+                name: 'Remove Messages',
                 value: 'removeMessages',
-                description: 'Remove last messages from the "send to" channel.',
+                description: 'Remove last messages from the "send to" channel',
             },
             {
-                name: 'Add role to user',
+                name: 'Add Role to User',
                 value: 'addRole',
-                description: 'Add a role to a user.',
+                description: 'Add a role to a user',
             },
             {
-                name: 'Remove role from user',
+                name: 'Remove Role From User',
                 value: 'removeRole',
-                description: 'Remove a role from a user.',
+                description: 'Remove a role from a user',
             },
         ],
         default: 'removeMessages',
-        description: 'Let you choose the type of action you want to perform.',
+        description: 'Let you choose the type of action you want to perform',
     },
     {
-        displayName: 'Channel',
+        displayName: 'Channel Name or ID',
         name: 'channelId',
-        required: false,
+
         type: 'options',
         displayOptions: {
             show: {
@@ -67,12 +65,12 @@ export const options: INodeProperties[] = [
             loadOptionsMethod: 'getChannels',
         },
         default: '',
-        description: `Let you specify the text channels where you want to send the message. Your credentials must be set and the bot running, you also need at least one text channel available. If you do not meet these requirements, make the changes then close and reopen the modal (the channels list is loaded when the modal opens).`,
+        description: 'Let you specify the text channels where you want to send the message. Your credentials must be set and the bot running, you also need at least one text channel available. If you do not meet these requirements, make the changes then close and reopen the modal (the channels list is loaded when the modal opens). Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
     },
     {
-        displayName: 'Server',
+        displayName: 'Server Name or ID',
         name: 'guildId',
-        required: false,
+
         type: 'options',
         displayOptions: {
             show: {
@@ -83,10 +81,10 @@ export const options: INodeProperties[] = [
             loadOptionsMethod: 'getGuilds',
         },
         default: '',
-        description: `Let you specify the guild where you want the action to happen.`,
+        description: 'Let you specify the guild where you want the action to happen. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
     },
     {
-        displayName: 'How many?',
+        displayName: 'How Many?',
         name: 'removeMessagesNumber',
         type: 'number',
         required: true,
@@ -100,8 +98,7 @@ export const options: INodeProperties[] = [
             maxValue: 100,
         },
         default: 1,
-        description:
-            'Number of last messages to remove (Discord API allow max 150 and messages < 4 weeks old).',
+        description: 'Number of last messages to remove (Discord API allow max 150 and messages < 4 weeks old)',
     },
     {
         displayName: 'User ID',
@@ -115,10 +112,10 @@ export const options: INodeProperties[] = [
             },
         },
         default: '',
-        description: 'The ID of the user you want to add or remove the role from.',
+        description: 'The ID of the user you want to add or remove the role from',
     },
     {
-        displayName: 'Which roles',
+        displayName: 'Which Role Names or IDs',
         name: 'roleUpdateIds',
         required: true,
         type: 'multiOptions',
@@ -132,7 +129,7 @@ export const options: INodeProperties[] = [
             loadOptionsMethod: 'getRoles',
         },
         default: [],
-        description: `Let you specify the roles you want to add or remove from the user.`,
+        description: 'Let you specify the roles you want to add or remove from the user. Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
     },
     {
         displayName: 'Content',
@@ -158,10 +155,9 @@ export const options: INodeProperties[] = [
                 type: ['message'],
             },
         },
-        required: false,
+
         default: false,
-        description:
-            'If active it will enable the creation of rich messages. See documentation for more information.',
+        description: 'Whether you want to create an embed message rather than a regular content message',
     },
     {
         displayName: 'Color',
@@ -179,7 +175,7 @@ export const options: INodeProperties[] = [
         displayName: 'Title',
         name: 'title',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -187,13 +183,13 @@ export const options: INodeProperties[] = [
             },
         },
         default: '',
-        description: '',
+
     },
     {
         displayName: 'URL',
         name: 'url',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -201,13 +197,13 @@ export const options: INodeProperties[] = [
             },
         },
         default: '',
-        description: '',
+
     },
     {
-        displayName: 'Author name',
+        displayName: 'Author Name',
         name: 'authorName',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -215,13 +211,13 @@ export const options: INodeProperties[] = [
             },
         },
         default: '',
-        description: '',
+
     },
     {
-        displayName: 'Author icon URL or base64',
+        displayName: 'Author Icon URL or Base64',
         name: 'authorIconUrl',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -238,7 +234,7 @@ export const options: INodeProperties[] = [
         displayName: 'Author URL',
         name: 'authorUrl',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -249,13 +245,13 @@ export const options: INodeProperties[] = [
             },
         },
         default: '',
-        description: '',
+
     },
     {
         displayName: 'Description',
         name: 'description',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -263,13 +259,13 @@ export const options: INodeProperties[] = [
             },
         },
         default: '',
-        description: '',
+
     },
     {
-        displayName: 'Thumbnail URL or base64',
+        displayName: 'Thumbnail URL or Base64',
         name: 'thumbnailUrl',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -293,7 +289,7 @@ export const options: INodeProperties[] = [
                 type: ['message', 'action'],
             },
         },
-        description: '',
+
         default: {},
         options: [
             {
@@ -305,32 +301,31 @@ export const options: INodeProperties[] = [
                         name: 'name',
                         type: 'string',
                         default: '',
-                        description: '',
+
                     },
                     {
                         displayName: 'Value',
                         name: 'value',
                         type: 'string',
                         default: '',
-                        description: '',
+
                     },
                     {
                         displayName: 'Inline',
                         name: 'inline',
                         type: 'boolean',
-                        required: false,
+
                         default: false,
-                        description: '',
                     },
                 ],
             },
         ],
     },
     {
-        displayName: 'Image URL or base64',
+        displayName: 'Image URL or Base64',
         name: 'imageUrl',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -341,10 +336,10 @@ export const options: INodeProperties[] = [
         description: 'URL/base64 of the image (png, jpg)',
     },
     {
-        displayName: 'Footer text',
+        displayName: 'Footer Text',
         name: 'footerText',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -352,13 +347,13 @@ export const options: INodeProperties[] = [
             },
         },
         default: '',
-        description: '',
+
     },
     {
-        displayName: 'Footer icon URL or base64',
+        displayName: 'Footer Icon URL or Base64',
         name: 'footerIconUrl',
         type: 'string',
-        required: false,
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -372,11 +367,11 @@ export const options: INodeProperties[] = [
         description: 'URL/base64 of the image (png, jpg)',
     },
     {
-        displayName: 'Displayed date',
+        displayName: 'Displayed Date',
         name: 'timestamp',
         type: 'dateTime',
         default: '',
-        description: '',
+
         displayOptions: {
             show: {
                 embed: [true],
@@ -397,7 +392,7 @@ export const options: INodeProperties[] = [
                 type: ['message'],
             },
         },
-        description: 'Allows to attach up to 5 images to the message.',
+        description: 'Allows to attach up to 5 images to the message',
         default: {},
         options: [
             {
@@ -405,20 +400,20 @@ export const options: INodeProperties[] = [
                 displayName: 'File',
                 values: [
                     {
-                        displayName: 'URL or base64',
+                        displayName: 'URL or Base64',
                         name: 'url',
                         type: 'string',
                         default: '',
-                        description: 'URL/base64 of the image to attach (png, jpg).',
+                        description: 'URL/base64 of the image to attach (png, jpg)',
                     },
                 ],
             },
         ],
     },
     {
-        displayName: 'Mention roles',
+        displayName: 'Mention Role Names or IDs',
         name: 'mentionRoles',
-        required: false,
+
         type: 'multiOptions',
         typeOptions: {
             loadOptionsMethod: 'getRoles',
@@ -429,6 +424,6 @@ export const options: INodeProperties[] = [
             },
         },
         default: [],
-        description: `Let you specify roles you want to mention in the message. Your credentials must be set and the bot running, you also need at least one role (apart from @everyone) available. If you do not meet these requirements, make the changes then close and reopen the modal.`,
+        description: 'Let you specify roles you want to mention in the message. Your credentials must be set and the bot running, you also need at least one role (apart from @everyone) available. If you do not meet these requirements, make the changes then close and reopen the modal. Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
     },
 ];
