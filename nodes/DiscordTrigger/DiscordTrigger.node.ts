@@ -6,7 +6,7 @@ import type {
     INodePropertyOptions,
 } from 'n8n-workflow';
 import { options } from './DiscordTrigger.node.options';
-import bot from './bot';
+import bot from '../bot';
 import ipc from 'node-ipc';
 import {
     connection,
@@ -14,7 +14,7 @@ import {
     checkWorkflowStatus,
     getChannels as getChannelsHelper,
     getRoles as getRolesHelper,
-} from './helper';
+} from '../helper';
 
 // we start the bot if we are in the main process
 if (!process.send) bot();

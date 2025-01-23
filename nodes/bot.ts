@@ -10,8 +10,8 @@ import ipc from 'node-ipc';
 import {
     ICredentials,
 } from './helper';
-import settings from './settings';
-import { IDiscordInteractionMessageParameters, IDiscordNodeActionParameters } from '../DiscordInteraction/DiscordInteraction.node';
+import settings from './DiscordTrigger/settings';
+import { IDiscordInteractionMessageParameters, IDiscordNodeActionParameters } from './DiscordInteraction/DiscordInteraction.node';
 
 export default function () {
     const client = new Client({
