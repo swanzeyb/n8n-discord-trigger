@@ -130,6 +130,7 @@ export class DiscordInteraction implements INodeType {
                 // return the interaction result if there is one
                 const res: any = new Promise((resolve) => {
                     ipc.config.retry = 1500;
+                    console.log("connecting to bot");
                     ipc.connectTo('bot', () => {
                         const type = `send:${nodeParameters.type}`;
                         ipc.of.bot.on(`callback:${type}`, (data: any) => {
