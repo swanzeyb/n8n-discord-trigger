@@ -13,7 +13,7 @@ import {
     getChannels as getChannelsHelper,
     getRoles as getRolesHelper,
     getGuilds as getGuildsHelper,
-} from './helper';
+} from '../DiscordTrigger/helper';
 
 
 export interface IDiscordInteractionMessageParameters {
@@ -132,7 +132,8 @@ export class DiscordInteraction implements INodeType {
                     `send:${nodeParameters.type}`,
                     nodeParameters,
                 ).catch((e) => {
-                    throw new Error(e);
+                    console.log(e);
+                    return this.prepareOutputData(this.getInputData());
                 });
 
                 returnData.push({

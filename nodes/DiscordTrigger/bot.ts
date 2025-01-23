@@ -11,7 +11,7 @@ import {
     ICredentials,
 } from './helper';
 import settings from './settings';
-import { IDiscordInteractionMessageParameters, IDiscordNodeActionParameters } from './DiscordInteraction.node';
+import { IDiscordInteractionMessageParameters, IDiscordNodeActionParameters } from '../DiscordInteraction/DiscordInteraction.node';
 
 export default function () {
     const client = new Client({
