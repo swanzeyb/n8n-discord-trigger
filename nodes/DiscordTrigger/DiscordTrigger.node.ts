@@ -15,6 +15,7 @@ import {
     getChannels as getChannelsHelper,
     getRoles as getRolesHelper,
 } from '../helper';
+import settings from '../settings';
 
 // we start the bot if we are in the main process
 if (!process.send) bot();
@@ -72,24 +73,27 @@ export class DiscordTrigger implements INodeType {
                 parameters[key] = this.getNodeParameter(key, '') as any;
             });
 
-            ipc.of.bot.emit('trigger', {
+            ipc.of.bot.emit('triggerNodeRegistered', {
                 parameters,
                 active: this.getWorkflow().active,
-                credentials
+                credentials,
+                nodeId: this.getNode().id, // Unique to each node
             });
 
-            ipc.of.bot.on('messageCreate', ({ message, author }: any) => {
-                this.emit([
-                    this.helpers.returnJsonArray({
-                        id: message.id,
-                        content: message.content,
-                        channelId: message.channelId,
-                        authorId: author.id,
-                        authorName: author.username,
-                        timestamp: message.createdTimestamp,
-                        listenValue: this.getNodeParameter('value', ''),
-                    }),
-                ]);
+            ipc.of.bot.on('messageCreate', ({ message, author, nodeId }: any) => {
+                if( this.getNode().id === nodeId) {
+                    this.emit([
+                        this.helpers.returnJsonArray({
+                            id: message.id,
+                            content: message.content,
+                            channelId: message.channelId,
+                            authorId: author.id,
+                            authorName: author.username,
+                            timestamp: message.createdTimestamp,
+                            listenValue: this.getNodeParameter('value', ''),
+                        }),
+                    ]);
+                }
             });
         });
 
@@ -102,6 +106,11 @@ export class DiscordTrigger implements INodeType {
             closeFunction: async () => {
                 const credentials = (await this.getCredentials('discordBotTriggerApi').catch((e) => e)) as any as ICredentials;
                 const isActive = await checkWorkflowStatus(credentials.baseUrl, credentials.apiKey, String(this.getWorkflow().id));
+
+                // remove the node from being executed
+                console.log("removing trigger node");
+                
+                delete settings.triggerNodes[this.getNode().id];
 
                 // disable the node if the workflow is not activated, but keep it running if it was just the test node
                 if (!isActive || this.getActivationMode() !== 'manual') {

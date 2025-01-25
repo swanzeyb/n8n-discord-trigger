@@ -16,7 +16,6 @@ This node utilizes a Discord bot to transmit or receive data from child processe
 [Credentials](#credentials)  <!-- delete if no auth needed -->  
 [Compatibility](#compatibility)  
 [Usage](#usage)  <!-- delete if not using this section -->  
-[Resources](#resources)  
 [Version history](#version-history)  <!-- delete if not using this section -->  
 
 ## Installation
@@ -69,13 +68,9 @@ To use this node:
 For more help on setting up n8n workflows, check the [Try it out documentation](https://docs.n8n.io/try-it-out/).
 
 
-## Resources
-
-* [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/)
-* _Link to app/service documentation._
-
 ## Version history
 
+- **v0.2.8**: Multiple trigger nodes are now supported.
 - **v0.2.7**: A second node Discord Interaction is added to send a message with the same credentials. Additionally roles of users can be added or removed based on interaction.
 - **v0.1.5**: Initial release with message triggers and channel/role fetching capabilities.
 

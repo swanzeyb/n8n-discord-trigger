@@ -6,6 +6,8 @@ const settings: {
     token: string;
     baseUrl: string;
     parameters: any;
+
+    triggerNodes: any;
 } = {
     ready: false,
     login: false,
@@ -14,6 +16,8 @@ const settings: {
     token: '',
     baseUrl: '',
     parameters: {},
+
+    triggerNodes: {},
 }
 
 export default settings;
