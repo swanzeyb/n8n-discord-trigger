@@ -54,12 +54,12 @@ export default function () {
 
             // whenever a message is created this listener is called
             const onMessageCreate = (message: any) => {
-                
+
                 // iterate through all nodes and see if we need to trigger some                
                 for(const [nodeId,  parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
                     try {
                         // ignore messages of other bots
-                        if (message.author.bot || message.author.system) return;
+                        if (message.author.bot || message.author.system) continue;
     
                         const pattern = parameters.pattern;
     
@@ -67,13 +67,13 @@ export default function () {
                         const userRoles = message.member?.roles.cache.map((role: any) => role.id);
                         if (parameters.roleIds.length) {
                             const hasRole = parameters.roleIds.some((role: any) => userRoles?.includes(role));
-                            if (!hasRole) return;
+                            if (!hasRole) continue;
                         }
     
                         // check if executed by the proper channel
                         if (parameters.channelIds.length) {
                             const isInChannel = parameters.channelIds.some((channelId: any) => message.channel.id?.includes(channelId));
-                            if (!isInChannel) return;
+                            if (!isInChannel) continue;
                         }
     
                         // escape the special chars to properly trigger the message
@@ -88,7 +88,7 @@ export default function () {
     
                         // return if we expect a bot mention, but bot is not mentioned
                         if (pattern === "botMention" && !botMention)
-                            return;
+                            continue;
     
                         else if (pattern === "start" && message.content)
                             regStr = `^${escapedTriggerValue}`;
@@ -122,7 +122,6 @@ export default function () {
             client.removeAllListeners('messageCreate');
             // Add new listener for `messageCreate`
             client.on('messageCreate', onMessageCreate);
-
         });
 
 

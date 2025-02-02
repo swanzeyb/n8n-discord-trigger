@@ -73,6 +73,8 @@ export class DiscordTrigger implements INodeType {
                 parameters[key] = this.getNodeParameter(key, '') as any;
             });
 
+            console.log("registering ", this.getNode().id, "... ", parameters);
+            
             ipc.of.bot.emit('triggerNodeRegistered', {
                 parameters,
                 active: this.getWorkflow().active,
