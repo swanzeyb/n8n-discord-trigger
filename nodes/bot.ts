@@ -93,8 +93,8 @@ export default function () {
 
                         // fetch the message reference only once and only if needed, even if multiple triggers are installed
                         if (!messageRerenceFetched) {
-                            messageRerenceFetched = true;
                             messageReference = await message.fetchReference();
+                            messageRerenceFetched = true;
                         }
 
 
