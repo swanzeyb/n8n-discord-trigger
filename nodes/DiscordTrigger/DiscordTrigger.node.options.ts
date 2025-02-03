@@ -2,35 +2,6 @@ import { INodeProperties } from 'n8n-workflow';
 
 export const options: INodeProperties[] = [
   {
-    displayName: 'Listen To Names or IDs',
-    name: 'channelIds',
-
-    type: 'multiOptions',
-    typeOptions: {
-      loadOptionsMethod: 'getChannels',
-    },
-    default: [],
-    description: 'Let you select the text channels you want to listen to for triggering the workflow. If none selected, all channels will be listen to. Your credentials must be set and the bot running, you also need at least one text channel available. If you do not meet these requirements, make the changes then close and reopen the modal (the channels list is loaded when the modal opens). Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-  },
-  {
-    displayName: 'From Role Names or IDs',
-    name: 'roleIds',
-
-    type: 'multiOptions',
-    displayOptions: {
-      show: {
-        type: [
-          'message',
-        ],
-      },
-    },
-    typeOptions: {
-      loadOptionsMethod: 'getRoles',
-    },
-    default: [],
-    description: 'The same logic apply here for roles, except it is optional. If you don\'t select any role it will listen to @everyone. Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-  },
-  {
     displayName: 'Trigger Type',
     name: 'type',
 
@@ -44,6 +15,57 @@ export const options: INodeProperties[] = [
     ],
     default: 'message',
     description: 'Type of event to listen to. User events must specify a channel to listen to if you want to use a placeholder or the option "send to the trigger channel" in a Discord Send node.',
+  },
+  {
+    displayName: 'Servers',
+    name: 'guildIds',
+    placeholder: 'e.g. my-server',
+    type: 'multiOptions',
+    displayOptions: {
+      show: {
+        type: ['message'],
+      },
+    },
+    typeOptions: {
+      loadOptionsMethod: 'getGuilds',
+    },
+    default: [],
+    description: 'Lets you specify whether you want to listen one or more specific discord servers. Choose from the list, or specify an ID.',
+  },
+  {
+    displayName: 'Listen To channels',
+    name: 'channelIds',
+    placeholder: 'e.g. my-channel',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsDependsOn: ['guildIds'],
+      loadOptionsMethod: 'getChannels',
+    },
+    displayOptions: {
+      show: {
+        type: ['message'],
+      },
+    },
+    default: [],
+    description: 'Lets you select the text channels you want to listen to for triggering the workflow. If none selected, all channels will be listen to. Your credentials must be set and the bot running, you also need at least one text channel available. If you do not meet these requirements, make the changes then close and reopen the modal (the channels list is loaded when the modal opens). Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+  },
+  {
+    displayName: 'Listen to roles',
+    placeholder: 'e.g. my-role',
+    name: 'roleIds',
+
+    type: 'multiOptions',
+    displayOptions: {
+      show: {
+        type: ['message'],
+      },
+    },
+    typeOptions: {
+      loadOptionsDependsOn: ['guildIds'],
+      loadOptionsMethod: 'getRoles',
+    },
+    default: [],
+    description: 'The same logic apply here for roles, except it is optional. If you don\'t select any role it will listen to @everyone. Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
   },
   {
     displayName: 'Pattern',
@@ -99,6 +121,7 @@ export const options: INodeProperties[] = [
     displayName: 'Value',
     name: 'value',
     type: 'string',
+    placeholder: 'e.g. !hello',
     displayOptions: {
       show: {
         type: ['message'],
@@ -121,6 +144,19 @@ export const options: INodeProperties[] = [
 
     default: false,
     description: 'Whether the value will be sensible to the case when matching the value',
+  },
+  {
+    displayName: 'Trigger Only on Message Replies',
+    name: 'messageReferenceRequired',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        type: ['message'],
+      },
+    },
+
+    default: false,
+    description: 'Whether the trigger activates only when the user replies to a message. The replied-to message will be included.',
   },
   {
     displayName: 'Message ID',

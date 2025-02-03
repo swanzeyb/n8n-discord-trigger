@@ -2,65 +2,10 @@ import { INodeProperties } from 'n8n-workflow';
 
 export const options: INodeProperties[] = [
     {
-        displayName: 'Type',
-        name: 'type',
-
-        type: 'options',
-        options: [
-            {
-                name: 'Action',
-                value: 'action',
-                description: 'Instead of sending a message, it will perform an action defined in the next field',
-            },
-            {
-                name: 'Message',
-                value: 'message',
-                description: 'This is the default type, it allows you to send a message without requiering any form of response',
-            },
-        ],
-        default: 'message',
-        description: 'Let you choose the type of interaction you want to perform',
-    },
-   {
-        displayName: 'Action',
-        name: 'actionType',
-
-        displayOptions: {
-            show: {
-                type: ['action'],
-            },
-        },
-        type: 'options',
-        options: [
-            {
-                name: 'Remove Messages',
-                value: 'removeMessages',
-                description: 'Remove last messages from the "send to" channel',
-            },
-            {
-                name: 'Add Role to User',
-                value: 'addRole',
-                description: 'Add a role to a user',
-            },
-            {
-                name: 'Remove Role From User',
-                value: 'removeRole',
-                description: 'Remove a role from a user',
-            },
-        ],
-        default: 'removeMessages',
-        description: 'Let you choose the type of action you want to perform',
-    },
-    {
         displayName: 'Server Name or ID',
         name: 'guildIds',
 
         type: 'options',
-        displayOptions: {
-            show: {
-                type: ['action', 'message'],
-            },
-        },
         typeOptions: {
             loadOptionsMethod: 'getGuilds',
         },
@@ -72,11 +17,6 @@ export const options: INodeProperties[] = [
         name: 'channelId',
 
         type: 'options',
-        displayOptions: {
-            show: {
-                type: ['message', 'action'],
-            },
-        },
         typeOptions: {
             loadOptionsDependsOn: ['guildIds'],
             loadOptionsMethod: 'getChannels',
@@ -85,63 +25,16 @@ export const options: INodeProperties[] = [
         description: 'Let you specify the text channels where you want to send the message. Your credentials must be set and the bot running, you also need at least one text channel available. If you do not meet these requirements, make the changes then close and reopen the modal (the channels list is loaded when the modal opens). Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
     },
     {
-        displayName: 'How Many?',
-        name: 'removeMessagesNumber',
-        type: 'number',
-        required: true,
-        displayOptions: {
-            show: {
-                type: ['action'],
-                actionType: ['removeMessages'],
-            },
-        },
-        typeOptions: {
-            maxValue: 100,
-        },
-        default: 1,
-        description: 'Number of last messages to remove (Discord API allow max 150 and messages < 4 weeks old)',
-    },
-    {
         displayName: 'User ID',
         name: 'userId',
         type: 'string',
-        required: true,
-        displayOptions: {
-            show: {
-                type: ['action'],
-                actionType: ['addRole', 'removeRole'],
-            },
-        },
         default: '',
         description: 'The ID of the user you want to add or remove the role from',
-    },
-    {
-        displayName: 'Which Role Names or IDs',
-        name: 'roleUpdateIds',
-        required: true,
-        type: 'multiOptions',
-        displayOptions: {
-            show: {
-                type: ['action'],
-                actionType: ['addRole', 'removeRole'],
-            },
-        },
-        typeOptions: {
-            loadOptionsDependsOn: ['guildIds'],
-            loadOptionsMethod: 'getRoles',
-        },
-        default: [],
-        description: 'Let you specify the roles you want to add or remove from the user. Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
     },
     {
         displayName: 'Content',
         name: 'content',
         type: 'string',
-        displayOptions: {
-            show: {
-                type: ['message'],
-            },
-        },
         typeOptions: {
             rows: 4,
         },
@@ -152,11 +45,6 @@ export const options: INodeProperties[] = [
         displayName: 'Embed',
         name: 'embed',
         type: 'boolean',
-        displayOptions: {
-            show: {
-                type: ['message'],
-            },
-        },
 
         default: false,
         description: 'Whether you want to create an embed message rather than a regular content message',
@@ -169,7 +57,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
     },
@@ -181,7 +68,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
         default: '',
@@ -195,7 +81,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
         default: '',
@@ -209,7 +94,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
         default: '',
@@ -223,7 +107,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
             hide: {
                 authorName: [''],
@@ -240,7 +123,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
             hide: {
                 authorName: [''],
@@ -257,7 +139,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
         default: '',
@@ -271,7 +152,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
         default: '',
@@ -288,7 +168,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message', 'action'],
             },
         },
 
@@ -331,7 +210,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
         default: '',
@@ -345,7 +223,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
         default: '',
@@ -359,7 +236,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
             hide: {
                 footerText: [''],
@@ -377,7 +253,6 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
             },
         },
     },
@@ -388,11 +263,6 @@ export const options: INodeProperties[] = [
         type: 'fixedCollection',
         typeOptions: {
             multipleValues: true,
-        },
-        displayOptions: {
-            show: {
-                type: ['message'],
-            },
         },
         description: 'Allows to attach up to 5 images to the message',
         default: {},
@@ -419,11 +289,6 @@ export const options: INodeProperties[] = [
         type: 'multiOptions',
         typeOptions: {
             loadOptionsMethod: 'getRoles',
-        },
-        displayOptions: {
-            show: {
-                type: ['message'],
-            },
         },
         default: [],
         description: 'Let you specify roles you want to mention in the message. Your credentials must be set and the bot running, you also need at least one role (apart from @everyone) available. If you do not meet these requirements, make the changes then close and reopen the modal. Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',

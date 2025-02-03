@@ -1,9 +1,9 @@
-import type {
-    INodeType,
-    INodeTypeDescription,
-    ITriggerFunctions,
-    ITriggerResponse,
-    INodePropertyOptions,
+import {
+    type INodeType,
+    type INodeTypeDescription,
+    type ITriggerFunctions,
+    type ITriggerResponse,
+    type INodePropertyOptions,
 } from 'n8n-workflow';
 import { options } from './DiscordTrigger.node.options';
 import bot from '../bot';
@@ -14,6 +14,7 @@ import {
     checkWorkflowStatus,
     getChannels as getChannelsHelper,
     getRoles as getRolesHelper,
+    getGuilds as getGuildsHelper,
 } from '../helper';
 import settings from '../settings';
 
@@ -44,11 +45,27 @@ export class DiscordTrigger implements INodeType {
 
     methods = {
         loadOptions: {
+            async getGuilds(): Promise<INodePropertyOptions[]> {
+                return await getGuildsHelper(this).catch((e) => e) as { name: string; value: string }[];
+            },
             async getChannels(): Promise<INodePropertyOptions[]> {
-                return await getChannelsHelper(this).catch((e) => e);
+                // @ts-ignore
+                const selectedGuilds = this.getNodeParameter('guildIds', []);
+                if (!selectedGuilds.length) {
+                    throw new Error  ('Please select at least one server before choosing channels.');
+                }
+
+                return await getChannelsHelper(this, selectedGuilds).catch((e) => e) as { name: string; value: string }[];
             },
             async getRoles(): Promise<INodePropertyOptions[]> {
-                return await getRolesHelper(this).catch((e) => e);
+                // @ts-ignore
+                const selectedGuilds = this.getNodeParameter('guildIds', []);
+                if (!selectedGuilds.length) {
+                    throw new Error('Please select at least one server before choosing channels.');
+                }
+                
+
+                return await getRolesHelper(this, selectedGuilds).catch((e) => e) as { name: string; value: string }[];
             },
         },
     };
@@ -82,18 +99,34 @@ export class DiscordTrigger implements INodeType {
                 nodeId: this.getNode().id, // Unique to each node
             });
 
-            ipc.of.bot.on('messageCreate', ({ message, author, nodeId }: any) => {
+            ipc.of.bot.on('messageCreate', ({ message, author, nodeId, messageReference, referenceAuthor }: any) => {
                 if( this.getNode().id === nodeId) {
+                    
+                    const messageCreateOptions = {
+                        id: message.id,
+                        content: message.content,
+                        channelId: message.channelId,
+                        authorId: author.id,
+                        authorName: author.username,
+                        timestamp: message.createdTimestamp,
+                        listenValue: this.getNodeParameter('value', ''),
+                        referenceId: null,
+                        referenceContent: null,
+                        referenceAuthorId: null,
+                        referenceAuthorName: null,
+                        referenceTimestamp: null,
+                    }
+
+                    if(messageReference) {
+                        messageCreateOptions.referenceId = messageReference.id;
+                        messageCreateOptions.referenceContent = messageReference.content;
+                        messageCreateOptions.referenceAuthorId = referenceAuthor.id;
+                        messageCreateOptions.referenceAuthorName = referenceAuthor.username;
+                        messageCreateOptions.referenceTimestamp = messageReference.createdTimestamp;
+                    }
+
                     this.emit([
-                        this.helpers.returnJsonArray({
-                            id: message.id,
-                            content: message.content,
-                            channelId: message.channelId,
-                            authorId: author.id,
-                            authorName: author.username,
-                            timestamp: message.createdTimestamp,
-                            listenValue: this.getNodeParameter('value', ''),
-                        }),
+                        this.helpers.returnJsonArray(messageCreateOptions),
                     ]);
                 }
             });

@@ -35,7 +35,7 @@ export const connection = (credentials: ICredentials): Promise<string> => {
 };
 
 
-export const getChannels = async (that: any): Promise<INodePropertyOptions[]> => {
+export const getChannels = async (that: any, guildIds: string[]): Promise<INodePropertyOptions[]> => {
     const endMessage = ' - Close and reopen this node modal once you have made changes.';
 
     const credentials = await that.getCredentials('discordBotTriggerApi').catch((e: any) => e);
@@ -55,7 +55,7 @@ export const getChannels = async (that: any): Promise<INodePropertyOptions[]> =>
 
             ipc.config.retry = 1500;
             ipc.connectTo('bot', () => {
-                ipc.of.bot.emit('list:channels');
+                ipc.of.bot.emit('list:channels', guildIds);
 
                 ipc.of.bot.on('list:channels', (data: { name: string; value: string }[]) => {
                     clearTimeout(timeout);
@@ -139,7 +139,7 @@ export interface IRole {
     id: string;
 }
 
-export const getRoles = async (that: any): Promise<INodePropertyOptions[]> => {
+export const getRoles = async (that: any, selectedGuildIds: string[]): Promise<INodePropertyOptions[]> => {
     const endMessage = ' - Close and reopen this node modal once you have made changes.';
 
     const credentials = await that.getCredentials('discordBotTriggerApi').catch((e: any) => e);
@@ -159,7 +159,7 @@ export const getRoles = async (that: any): Promise<INodePropertyOptions[]> => {
 
             ipc.config.retry = 1500;
             ipc.connectTo('bot', () => {
-                ipc.of.bot.emit('list:roles');
+                ipc.of.bot.emit('list:roles', selectedGuildIds);
 
                 ipc.of.bot.on('list:roles', (data: any) => {
                     clearTimeout(timeout);

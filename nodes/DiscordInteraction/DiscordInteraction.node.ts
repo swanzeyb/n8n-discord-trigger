@@ -91,10 +91,25 @@ export class DiscordInteraction implements INodeType {
     methods = {
         loadOptions: {
             async getChannels(): Promise<INodePropertyOptions[]> {
-                return await getChannelsHelper(this).catch((e) => e);
+                  // @ts-ignore
+                  const selectedGuilds = this.getNodeParameter('guildIds', []);
+                  console.log("selectedGuilds", selectedGuilds);
+                  
+                  if (!selectedGuilds.length) {
+                      throw new Error('Please select at least one server before choosing channels.');
+                  }
+
+                return await getChannelsHelper(this, selectedGuilds).catch((e) => e);
             },
-            async getRoles(): Promise<INodePropertyOptions[]> {
-                return await getRolesHelper(this).catch((e) => e);
+            async getRoles(): Promise<INodePropertyOptions[]> {  
+                // @ts-ignore
+                const selectedGuilds = this.getNodeParameter('guildIds', []);
+                console.log("selectedGuilds", selectedGuilds);
+                
+                if (!selectedGuilds.length) {
+                    throw new Error('Please select at least one server before choosing channels.');
+                }
+                return await getRolesHelper(this, selectedGuilds).catch((e) => e);
             },
             async getGuilds(): Promise<INodePropertyOptions[]> {
                 return await getGuildsHelper(this).catch((e) => e);
@@ -117,6 +132,7 @@ export class DiscordInteraction implements INodeType {
             return this.prepareOutputData(this.getInputData());
         });
 
+
         // iterate over all nodes
         const items: INodeExecutionData[] = this.getInputData();
         for (let itemIndex: number = 0; itemIndex < items.length; itemIndex++) {
@@ -134,7 +150,6 @@ export class DiscordInteraction implements INodeType {
                     ipc.connectTo('bot', () => {
                         const type = `send:${nodeParameters.type}`;
                         ipc.of.bot.on(`callback:${type}`, (data: any) => {
-                            console.log("response fired", data);
                             resolve(data);
                         });
 
