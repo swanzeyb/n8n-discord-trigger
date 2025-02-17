@@ -17,7 +17,7 @@ export const options: INodeProperties[] = [
     description: 'Type of event to listen to. User events must specify a channel to listen to if you want to use a placeholder or the option "send to the trigger channel" in a Discord Send node.',
   },
   {
-    displayName: 'Servers',
+    displayName: 'Server Names or IDs',
     name: 'guildIds',
     placeholder: 'e.g. my-server',
     type: 'multiOptions',
@@ -30,10 +30,10 @@ export const options: INodeProperties[] = [
       loadOptionsMethod: 'getGuilds',
     },
     default: [],
-    description: 'Lets you specify whether you want to listen one or more specific discord servers. Choose from the list, or specify an ID.',
+    description: 'Lets you specify whether you want to listen one or more specific discord servers. Choose from the list, or specify an ID. Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
   },
   {
-    displayName: 'Listen To channels',
+    displayName: 'Listen To Channels',
     name: 'channelIds',
     placeholder: 'e.g. my-channel',
     type: 'multiOptions',
@@ -50,7 +50,7 @@ export const options: INodeProperties[] = [
     description: 'Lets you select the text channels you want to listen to for triggering the workflow. If none selected, all channels will be listen to. Your credentials must be set and the bot running, you also need at least one text channel available. If you do not meet these requirements, make the changes then close and reopen the modal (the channels list is loaded when the modal opens). Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
   },
   {
-    displayName: 'Listen to roles',
+    displayName: 'Listen to Roles',
     placeholder: 'e.g. my-role',
     name: 'roleIds',
 
@@ -187,11 +187,11 @@ export const options: INodeProperties[] = [
     placeholder: 'Add Field',
     options: [
       {
-        displayName: 'Trigger on other bot input',
+        displayName: 'Trigger on Other Bot Input',
         name: 'externalBotTrigger',
         type: 'boolean',
         default: false,
-        description: "Whether this node triggers when another bot sends a message.",
+        description: "Whether this node triggers when another bot sends a message",
       },
     ],									
   }

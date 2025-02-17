@@ -20,7 +20,7 @@ export const options: INodeProperties[] = [
             {
                 name: 'Confirmation',
                 value: 'confirm',
-                description: 'Let \'s the user decide whether to continue the interaction.',
+                description: 'Let \'s the user decide whether to continue the interaction',
             },
         ],
         default: 'message',

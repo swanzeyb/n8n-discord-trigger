@@ -6,6 +6,7 @@ import {
     type IExecuteFunctions,
     type INodeParameters,
     INodeOutputConfiguration,
+    NodeOperationError,
 } from 'n8n-workflow';
 import { options } from './DiscordInteraction.node.options';
 import ipc from 'node-ipc';
@@ -113,7 +114,8 @@ export class DiscordInteraction implements INodeType {
                 console.log("selectedGuilds", selectedGuilds);
 
                 if (!selectedGuilds.length) {
-                    throw new Error('Please select at least one server before choosing channels.');
+                    // @ts-ignore
+                    throw new NodeOperationError('Please select at least one server before choosing channels.');
                 }
 
                 return await getChannelsHelper(this, selectedGuilds).catch((e) => e);
@@ -124,7 +126,8 @@ export class DiscordInteraction implements INodeType {
                 console.log("selectedGuilds", selectedGuilds);
 
                 if (!selectedGuilds.length) {
-                    throw new Error('Please select at least one server before choosing channels.');
+                    // @ts-ignore
+                    throw new NodeOperationError('Please select at least one server before choosing channels.');
                 }
                 return await getRolesHelper(this, selectedGuilds).catch((e) => e);
             },

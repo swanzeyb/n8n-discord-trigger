@@ -4,6 +4,7 @@ import {
     type ITriggerFunctions,
     type ITriggerResponse,
     type INodePropertyOptions,
+    NodeOperationError,
 } from 'n8n-workflow';
 import { options } from './DiscordTrigger.node.options';
 import bot from '../bot';
@@ -52,7 +53,8 @@ export class DiscordTrigger implements INodeType {
                 // @ts-ignore
                 const selectedGuilds = this.getNodeParameter('guildIds', []);
                 if (!selectedGuilds.length) {
-                    throw new Error  ('Please select at least one server before choosing channels.');
+                    // @ts-ignore
+                    throw new NodeOperationError('Please select at least one server before choosing channels.');
                 }
 
                 return await getChannelsHelper(this, selectedGuilds).catch((e) => e) as { name: string; value: string }[];
@@ -61,7 +63,8 @@ export class DiscordTrigger implements INodeType {
                 // @ts-ignore
                 const selectedGuilds = this.getNodeParameter('guildIds', []);
                 if (!selectedGuilds.length) {
-                    throw new Error('Please select at least one server before choosing channels.');
+                    // @ts-ignore
+                    throw new NodeOperationError('Please select at least one server before choosing channels.');
                 }
                 
 
