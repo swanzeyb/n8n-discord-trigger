@@ -71,7 +71,8 @@ For more help on setting up n8n workflows, check the [Try it out documentation](
 
 ## Version history
 
-- **v0.3.0**: Added option to require a reference message in order to trigger the node. Added a confirmation node
+- **v0.3.1**: Added additional option to trigger node to trigger on other bot messages
+- **v0.3.0**: Added option to require a reference message in order to trigger the node. Enhance interaction node with a confirmation node
 - **v0.2.9**: Bug fix, where a message won't trigger when multiple trigger nodes are included.
 - **v0.2.8**: Multiple trigger nodes are now supported.
 - **v0.2.7**: A second node Discord Interaction is added to send a message with the same credentials. Additionally roles of users can be added or removed based on interaction.

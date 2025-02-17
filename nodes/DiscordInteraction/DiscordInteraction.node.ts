@@ -1,9 +1,11 @@
-import type {
-    INodeType,
-    INodeExecutionData,
-    INodeTypeDescription,
-    INodePropertyOptions,
-    IExecuteFunctions,
+import {
+    type INodeType,
+    type INodeExecutionData,
+    type INodeTypeDescription,
+    type INodePropertyOptions,
+    type IExecuteFunctions,
+    type INodeParameters,
+    INodeOutputConfiguration,
 } from 'n8n-workflow';
 import { options } from './DiscordInteraction.node.options';
 import ipc from 'node-ipc';
@@ -66,6 +68,21 @@ export interface IDiscordNodeActionParameters {
 }
 
 
+const configuredOutputs = (parameters: INodeParameters) => {
+    const mode = parameters.type as string;
+
+    if (mode === 'confirm') {
+        return [
+            { displayName: 'confirm', type: 'main' },
+            { displayName: 'cancel', type: 'main' },
+            { displayName: 'no response', type: 'main' },
+        ] as INodeOutputConfiguration[];
+    } else {
+        return [{ type: 'main' }] as INodeOutputConfiguration[];
+    }
+};
+
+
 export class DiscordInteraction implements INodeType {
     description: INodeTypeDescription = {
         displayName: 'Discord Interaction',
@@ -78,7 +95,7 @@ export class DiscordInteraction implements INodeType {
         },
         icon: 'file:discord-logo.svg',
         inputs: ['main'],
-        outputs: ['main'],
+        outputs: `={{(${configuredOutputs})($parameter)}}`,
         credentials: [
             {
                 name: 'discordBotTriggerApi',
@@ -91,21 +108,21 @@ export class DiscordInteraction implements INodeType {
     methods = {
         loadOptions: {
             async getChannels(): Promise<INodePropertyOptions[]> {
-                  // @ts-ignore
-                  const selectedGuilds = this.getNodeParameter('guildIds', []);
-                  console.log("selectedGuilds", selectedGuilds);
-                  
-                  if (!selectedGuilds.length) {
-                      throw new Error('Please select at least one server before choosing channels.');
-                  }
-
-                return await getChannelsHelper(this, selectedGuilds).catch((e) => e);
-            },
-            async getRoles(): Promise<INodePropertyOptions[]> {  
                 // @ts-ignore
                 const selectedGuilds = this.getNodeParameter('guildIds', []);
                 console.log("selectedGuilds", selectedGuilds);
-                
+
+                if (!selectedGuilds.length) {
+                    throw new Error('Please select at least one server before choosing channels.');
+                }
+
+                return await getChannelsHelper(this, selectedGuilds).catch((e) => e);
+            },
+            async getRoles(): Promise<INodePropertyOptions[]> {
+                // @ts-ignore
+                const selectedGuilds = this.getNodeParameter('guildIds', []);
+                console.log("selectedGuilds", selectedGuilds);
+
                 if (!selectedGuilds.length) {
                     throw new Error('Please select at least one server before choosing channels.');
                 }
@@ -121,7 +138,6 @@ export class DiscordInteraction implements INodeType {
 
         // @ts-ignore
         const executionId = this.getExecutionId();
-        const returnData: INodeExecutionData[] = [];
 
         // fetch credentials
         const credentials = (await this.getCredentials('discordBotTriggerApi').catch((e) => e)) as any as ICredentials;
@@ -129,52 +145,101 @@ export class DiscordInteraction implements INodeType {
         // create connection to bot. 
         await connection(credentials).catch((e) => {
             console.log(e);
-            return this.prepareOutputData(this.getInputData());
+            if (this.getNodeParameter('type', 0) === 'confirm') {
+                const returnData: INodeExecutionData[][] = [[], [], []];
+                returnData[2] = this.getInputData();
+                return returnData;
+            } else {
+                return this.prepareOutputData(this.getInputData());
+            }
         });
 
-
-        // iterate over all nodes
-        const items: INodeExecutionData[] = this.getInputData();
-        for (let itemIndex: number = 0; itemIndex < items.length; itemIndex++) {
-            const nodeParameters: any = {};
-            Object.keys(this.getNode().parameters).forEach((key) => {
-                nodeParameters[key] = this.getNodeParameter(key, itemIndex, '') as any;
+        if (this.getNodeParameter('type', 0) === 'confirm') {
+            const returnData: INodeExecutionData[][] = [[], [], []];
+            // create connection to bot. 
+            await connection(credentials).catch((e) => {
+                console.log(e);
+                returnData[2] = this.getInputData();
+                return returnData;
             });
-            nodeParameters.executionId = executionId;
 
-            if (nodeParameters.channelId || nodeParameters.executionId) {
-                // return the interaction result if there is one
-                const res: any = new Promise((resolve) => {
-                    ipc.config.retry = 1500;
-                    console.log("connecting to bot");
-                    ipc.connectTo('bot', () => {
-                        const type = `send:${nodeParameters.type}`;
-                        ipc.of.bot.on(`callback:${type}`, (data: any) => {
-                            resolve(data);
-                        });
+            // Prepare the node parameters to send to the bot
 
-                        // send event to bot
-                        ipc.of.bot.emit(type, nodeParameters);
+            const nodeParameters: Record<string, any> = {};
+            Object.keys(this.getNode().parameters).forEach((key) => {
+                nodeParameters[key] = this.getNodeParameter(key, 0, '');
+            });
+
+            const response: any = await new Promise((resolve) => {
+                ipc.config.retry = 1500;
+                console.log("connecting to bot");
+                ipc.connectTo('bot', () => {
+                    const type = `send:confirmation`;
+                    ipc.of.bot.on(`callback:send:confirmation`, (data: any) => {
+                        console.log("user decided", data);
+                        resolve(data);
                     });
-                }).catch((e) => {
-                    console.log(e);
-                    return this.prepareOutputData(this.getInputData());
-                });
 
-                returnData.push({
-                    json: {
-                        value: res?.value,
-                        channelId: res?.channelId,
-                        userId: res?.userId,
-                        userName: res?.userName,
-                        userTag: res?.userTag,
-                        messageId: res?.messageId,
-                        action: res?.action,
-                    },
+                    // send event to bot
+                    ipc.of.bot.emit(type, nodeParameters);
                 });
+            });
+            console.log(response);
+        
+            if (response.confirmed === null)
+                returnData[2] = this.getInputData();
+            else if(response.confirmed === true)
+                returnData[0] = this.getInputData();
+            else 
+                returnData[1] = this.getInputData();
+
+            return returnData;
+            
+        } else {
+            const returnData: INodeExecutionData[] = [];
+            // iterate over all nodes
+            const items: INodeExecutionData[] = this.getInputData();
+            for (let itemIndex: number = 0; itemIndex < items.length; itemIndex++) {
+                const nodeParameters: any = {};
+                Object.keys(this.getNode().parameters).forEach((key) => {
+                    nodeParameters[key] = this.getNodeParameter(key, itemIndex, '') as any;
+                });
+                nodeParameters.executionId = executionId;
+
+                if (nodeParameters.channelId || nodeParameters.executionId) {
+                    // return the interaction result if there is one
+                    const res: any = new Promise((resolve) => {
+                        ipc.config.retry = 1500;
+                        console.log("connecting to bot");
+                        ipc.connectTo('bot', () => {
+                            const type = `send:${nodeParameters.type}`;
+                            ipc.of.bot.on(`callback:${type}`, (data: any) => {
+                                resolve(data);
+                            });
+
+                            // send event to bot
+                            ipc.of.bot.emit(type, nodeParameters);
+                        });
+                    }).catch((e) => {
+                        console.log(e);
+                        return this.prepareOutputData(this.getInputData());
+                    });
+
+                    returnData.push({
+                        json: {
+                            value: res?.value,
+                            channelId: res?.channelId,
+                            userId: res?.userId,
+                            userName: res?.userName,
+                            userTag: res?.userTag,
+                            messageId: res?.messageId,
+                            action: res?.action,
+                        },
+                    });
+                }
             }
-        }
 
-        return this.prepareOutputData(returnData);
+            return this.prepareOutputData(returnData);
+        }
     }
 }

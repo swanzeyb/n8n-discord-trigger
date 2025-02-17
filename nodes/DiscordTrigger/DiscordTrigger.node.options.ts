@@ -179,4 +179,20 @@ export const options: INodeProperties[] = [
     default: '',
     description: 'The placeholder is a message that will appear in the channel that triggers the workflow. Three animated dots added to the placeholder indicate that the workflow is running. From a Discord Send node, you can set up a response message which will then take the place of this placeholder.',
   },
+  {
+    displayName: 'Additional Fields',
+    name: 'additionalFields',
+    type: 'collection',
+    default: {},
+    placeholder: 'Add Field',
+    options: [
+      {
+        displayName: 'Trigger on other bot input',
+        name: 'externalBotTrigger',
+        type: 'boolean',
+        default: false,
+        description: "Whether this node triggers when another bot sends a message.",
+      },
+    ],									
+  }
 ];

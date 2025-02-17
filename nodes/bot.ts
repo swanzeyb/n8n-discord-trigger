@@ -67,10 +67,17 @@ export default function () {
                 // iterate through all nodes and see if we need to trigger some                
                 for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
                     try {
-                        // ignore messages of other bots
-                        if (message.author.bot || message.author.system) continue;
 
                         const pattern = parameters.pattern;
+
+                        const triggerOnExternalBot = parameters.additionalFields?.externalBotTrigger || false;
+
+                        // ignore messages of other bots
+                        if(!triggerOnExternalBot) {
+                            if (message.author.bot || message.author.system) continue;
+                        }
+                        else if(message.author.id === message.client.user.id) continue;
+
 
                         // check if executed by the proper role
                         const userRoles = message.member?.roles.cache.map((role: any) => role.id);

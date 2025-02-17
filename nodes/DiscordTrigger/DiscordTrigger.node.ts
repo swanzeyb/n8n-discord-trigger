@@ -110,6 +110,7 @@ export class DiscordTrigger implements INodeType {
                         authorName: author.username,
                         timestamp: message.createdTimestamp,
                         listenValue: this.getNodeParameter('value', ''),
+                        authorIsBot: author.bot || author.system,
                         referenceId: null,
                         referenceContent: null,
                         referenceAuthorId: null,

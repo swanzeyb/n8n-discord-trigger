@@ -17,6 +17,11 @@ export const options: INodeProperties[] = [
                 value: 'message',
                 description: 'This is the default type, it allows you to send a message without requiering any form of response',
             },
+            {
+                name: 'Confirmation',
+                value: 'confirm',
+                description: 'Let \'s the user decide whether to continue the interaction.',
+            },
         ],
         default: 'message',
         description: 'Let you choose the type of interaction you want to perform',
@@ -58,7 +63,7 @@ export const options: INodeProperties[] = [
         type: 'options',
         displayOptions: {
             show: {
-                type: ['action', 'message'],
+                type: ['action', 'message', 'confirm'],
             },
         },
         typeOptions: {
@@ -74,7 +79,7 @@ export const options: INodeProperties[] = [
         type: 'options',
         displayOptions: {
             show: {
-                type: ['message', 'action'],
+                type: ['message', 'action', 'confirm'],
             },
         },
         typeOptions: {
@@ -139,7 +144,7 @@ export const options: INodeProperties[] = [
         type: 'string',
         displayOptions: {
             show: {
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         typeOptions: {
@@ -154,7 +159,7 @@ export const options: INodeProperties[] = [
         type: 'boolean',
         displayOptions: {
             show: {
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
 
@@ -169,7 +174,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
     },
@@ -181,7 +186,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         default: '',
@@ -195,7 +200,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         default: '',
@@ -209,7 +214,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         default: '',
@@ -223,7 +228,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
             hide: {
                 authorName: [''],
@@ -240,7 +245,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
             hide: {
                 authorName: [''],
@@ -257,7 +262,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         default: '',
@@ -271,7 +276,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         default: '',
@@ -288,7 +293,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message', 'action'],
+                type: ['message', 'action', 'confirm'],
             },
         },
 
@@ -331,7 +336,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         default: '',
@@ -345,7 +350,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         default: '',
@@ -359,7 +364,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
             hide: {
                 footerText: [''],
@@ -377,7 +382,7 @@ export const options: INodeProperties[] = [
         displayOptions: {
             show: {
                 embed: [true],
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
     },
@@ -391,7 +396,7 @@ export const options: INodeProperties[] = [
         },
         displayOptions: {
             show: {
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         description: 'Allows to attach up to 5 images to the message',
@@ -422,7 +427,7 @@ export const options: INodeProperties[] = [
         },
         displayOptions: {
             show: {
-                type: ['message'],
+                type: ['message', 'confirm'],
             },
         },
         default: [],
