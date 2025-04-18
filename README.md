@@ -71,6 +71,7 @@ For more help on setting up n8n workflows, check the [Try it out documentation](
 
 ## Version history
 
+- **v0.3.2**: Update for multiple simultaneous trigger nodes with one bot.
 - **v0.3.1**: Added additional option to trigger node to trigger on other bot messages
 - **v0.3.0**: Added option to require a reference message in order to trigger the node. Enhance interaction node with a confirmation node
 - **v0.2.9**: Bug fix, where a message won't trigger when multiple trigger nodes are included.
