@@ -35,15 +35,105 @@ export default function () {
         },
     });
 
-    client.once('ready', () => {
-        console.log(`Logged in as ${client.user?.tag}`);
-    });
-
-
-
     ipc.config.id = 'bot';
     ipc.config.retry = 1500;
     ipc.config.silent = true;
+
+    client.once('ready', () => {
+        console.log(`Logged in as ${client.user?.tag}`);
+        client.on('messageCreate', onMessageCreate);
+    });
+
+    // whenever a message is created this listener is called
+    const onMessageCreate = async (message: Message) => {
+
+        // resolve the message reference if it exists
+        let messageReference: Message | null = null;
+        let messageRerenceFetched = !(message.reference);
+
+        // iterate through all nodes and see if we need to trigger some                
+        for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
+            try {
+                const pattern = parameters.pattern;
+
+                const triggerOnExternalBot = parameters.additionalFields?.externalBotTrigger || false;
+
+                // ignore messages of other bots
+                if(!triggerOnExternalBot) {
+                    if (message.author.bot || message.author.system) continue;
+                }
+                else if(message.author.id === message.client.user.id) continue;
+
+
+                // check if executed by the proper role
+                const userRoles = message.member?.roles.cache.map((role: any) => role.id);
+                if (parameters.roleIds.length) {
+                    const hasRole = parameters.roleIds.some((role: any) => userRoles?.includes(role));
+                    if (!hasRole) continue;
+                }
+
+                // check if executed by the proper channel
+                if (parameters.channelIds.length) {
+                    const isInChannel = parameters.channelIds.some((channelId: any) => message.channel.id?.includes(channelId));
+                    if (!isInChannel) continue;
+                }
+
+
+                // check if the message has to have a message that was responded to
+                if (parameters.messageReferenceRequired && !message.reference) {
+                    continue;
+                }
+
+                // fetch the message reference only once and only if needed, even if multiple triggers are installed
+                if (!messageRerenceFetched) {
+                    messageReference = await message.fetchReference();
+                    messageRerenceFetched = true;
+                }
+
+
+                // escape the special chars to properly trigger the message
+                const escapedTriggerValue = String(parameters.value)
+                    .replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
+                    .replace(/-/g, '\\x2d');
+
+                const clientId = client.user?.id;
+                const botMention = message.mentions.users.some((user: any) => user.id === clientId);
+
+                let regStr = `^${escapedTriggerValue}$`;
+
+                // return if we expect a bot mention, but bot is not mentioned
+                if (pattern === "botMention" && !botMention)
+                    continue;
+
+                else if (pattern === "start" && message.content)
+                    regStr = `^${escapedTriggerValue}`;
+                else if (pattern === 'end')
+                    regStr = `${escapedTriggerValue}$`;
+                else if (pattern === 'contain')
+                    regStr = `${escapedTriggerValue}`;
+                else if (pattern === 'regex')
+                    regStr = `${parameters.value}`;
+                else if (pattern === 'every')
+                    regStr = `(.*)`;
+
+                const reg = new RegExp(regStr, parameters.caseSensitive ? '' : 'i');
+
+                if ((pattern === "botMention" && botMention) || reg.test(message.content)) {
+                    // Emit the message data to n8n
+                    ipc.server.emit(parameters.socket, 'messageCreate', {
+                        message,
+                        messageReference,
+                        referenceAuthor: messageReference?.author,
+                        author: message.author,
+                        nodeId: nodeId
+                    });
+                }
+
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    };
 
     // nodes are executed in a child process, the Discord bot is executed in the main process
     // so it's not stopped when a node execution end
@@ -55,107 +145,18 @@ export default function () {
         ipc.server.on('triggerNodeRegistered', (data: any, socket: any) => {
 
             // set the specific node parameters for a later iteration when we get messages
-            settings.triggerNodes[data.nodeId] = data.parameters;
-
-            // whenever a message is created this listener is called
-            const onMessageCreate = async (message: Message) => {
-
-                // resolve the message reference if it exists
-                let messageReference: Message | null = null;
-                let messageRerenceFetched = !(message.reference);
-
-                // iterate through all nodes and see if we need to trigger some                
-                for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
-                    try {
-
-                        const pattern = parameters.pattern;
-
-                        const triggerOnExternalBot = parameters.additionalFields?.externalBotTrigger || false;
-
-                        // ignore messages of other bots
-                        if(!triggerOnExternalBot) {
-                            if (message.author.bot || message.author.system) continue;
-                        }
-                        else if(message.author.id === message.client.user.id) continue;
-
-
-                        // check if executed by the proper role
-                        const userRoles = message.member?.roles.cache.map((role: any) => role.id);
-                        if (parameters.roleIds.length) {
-                            const hasRole = parameters.roleIds.some((role: any) => userRoles?.includes(role));
-                            if (!hasRole) continue;
-                        }
-
-                        // check if executed by the proper channel
-                        if (parameters.channelIds.length) {
-                            const isInChannel = parameters.channelIds.some((channelId: any) => message.channel.id?.includes(channelId));
-                            if (!isInChannel) continue;
-                        }
-
-
-                        // check if the message has to have a message that was responded to
-                        if (parameters.messageReferenceRequired && !message.reference) {
-                            continue;
-                        }
-
-                        // fetch the message reference only once and only if needed, even if multiple triggers are installed
-                        if (!messageRerenceFetched) {
-                            messageReference = await message.fetchReference();
-                            messageRerenceFetched = true;
-                        }
-
-
-                        // escape the special chars to properly trigger the message
-                        const escapedTriggerValue = String(parameters.value)
-                            .replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
-                            .replace(/-/g, '\\x2d');
-
-                        const clientId = client.user?.id;
-                        const botMention = message.mentions.users.some((user: any) => user.id === clientId);
-
-                        let regStr = `^${escapedTriggerValue}$`;
-
-                        // return if we expect a bot mention, but bot is not mentioned
-                        if (pattern === "botMention" && !botMention)
-                            continue;
-
-                        else if (pattern === "start" && message.content)
-                            regStr = `^${escapedTriggerValue}`;
-                        else if (pattern === 'end')
-                            regStr = `${escapedTriggerValue}$`;
-                        else if (pattern === 'contain')
-                            regStr = `${escapedTriggerValue}`;
-                        else if (pattern === 'regex')
-                            regStr = `${parameters.value}`;
-                        else if (pattern === 'every')
-                            regStr = `(.*)`;
-
-                        const reg = new RegExp(regStr, parameters.caseSensitive ? '' : 'i');
-
-                        if ((pattern === "botMention" && botMention) || reg.test(message.content)) {
-                            // Emit the message data to n8n
-                            ipc.server.emit(socket, 'messageCreate', {
-                                message,
-                                messageReference,
-                                referenceAuthor: messageReference?.author,
-                                author: message.author,
-                                nodeId: nodeId
-                            });
-                        }
-
-                    } catch (e) {
-                        console.log(e);
-                    }
-                }
+            settings.triggerNodes[data.nodeId] = {
+                ...data.parameters, // deconscruct and add socket for later
+                socket: socket,
             };
-
-            // Clear existing listeners for `messageCreate`
-            client.removeAllListeners('messageCreate');
-            // Add new listener for `messageCreate`
-            client.on('messageCreate', onMessageCreate);
         });
 
-
+        ipc.server.on('triggerNodeRemoved', (data: { nodeId: string }, socket: any) => {
+            console.log(`Removing trigger node: ${data.nodeId}`);
+            if (settings.triggerNodes[data.nodeId]) {
+                delete settings.triggerNodes[data.nodeId];
+            }
+        });
 
 
         ipc.server.on('list:roles', (guildIds: string[], socket: any) => {

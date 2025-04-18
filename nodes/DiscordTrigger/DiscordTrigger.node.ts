@@ -151,6 +151,11 @@ export class DiscordTrigger implements INodeType {
                 
                 delete settings.triggerNodes[this.getNode().id];
 
+                // Send message to bot process to deregister this node
+                ipc.connectTo('bot', () => {
+                    ipc.of.bot.emit('triggerNodeRemoved', { nodeId: this.getNode().id });
+                });
+
                 // disable the node if the workflow is not activated, but keep it running if it was just the test node
                 if (!isActive || this.getActivationMode() !== 'manual') {
                     console.log('Workflow stopped. Disconnecting bot...');
