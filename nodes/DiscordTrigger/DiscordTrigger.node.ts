@@ -102,12 +102,13 @@ export class DiscordTrigger implements INodeType {
                 nodeId: this.getNode().id, // Unique to each node
             });
 
-            ipc.of.bot.on('messageCreate', ({ message, author, nodeId, messageReference, referenceAuthor }: any) => {
+            ipc.of.bot.on('messageCreate', ({ message, author, guild, nodeId, messageReference, referenceAuthor }: any) => {
                 if( this.getNode().id === nodeId) {
                     
                     const messageCreateOptions = {
                         id: message.id,
                         content: message.content,
+                        guildId: guild?.id,
                         channelId: message.channelId,
                         authorId: author.id,
                         authorName: author.username,
@@ -131,6 +132,55 @@ export class DiscordTrigger implements INodeType {
 
                     this.emit([
                         this.helpers.returnJsonArray(messageCreateOptions),
+                    ]);
+                }
+            });
+
+            ipc.of.bot.on('guildMemberAdd', ({guildMember, guild, user, nodeId}) => {
+                if( this.getNode().id === nodeId) {
+                    this.emit([
+                        this.helpers.returnJsonArray(guildMember),
+                    ]);
+                }
+            });
+            
+            ipc.of.bot.on('guildMemberRemove', ({guildMember, guild, user, nodeId}) => {
+                if( this.getNode().id === nodeId) {
+                    this.emit([
+                        this.helpers.returnJsonArray(guildMember),
+                    ]);
+                }
+            });
+
+            ipc.of.bot.on('roleCreate', ({role, guild, nodeId}) => {
+                if( this.getNode().id === nodeId) {
+                    this.emit([
+                        this.helpers.returnJsonArray(role),
+                    ]);
+                }
+            });
+            
+            ipc.of.bot.on('roleDelete', ({role, guild, nodeId}) => {
+                if( this.getNode().id === nodeId) {
+                    this.emit([
+                        this.helpers.returnJsonArray(role),
+                    ]);
+                }
+            });
+            
+            ipc.of.bot.on('roleUpdate', ({oldRole, newRole, guild, nodeId}) => {
+                if( this.getNode().id === nodeId) {
+
+                    const addPrefix = (obj: any, prefix: string) =>
+                        Object.fromEntries(Object.entries(obj).map(([key, value]) => [`${prefix}${key.charAt(0).toUpperCase()}${key.slice(1)}`, value]));
+                      
+                    const mergedRoleOptions: any = {
+                        ...addPrefix(oldRole, "old"),
+                        ...addPrefix(newRole, "new")
+                    };
+
+                    this.emit([
+                        this.helpers.returnJsonArray(mergedRoleOptions),
                     ]);
                 }
             });

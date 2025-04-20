@@ -12,6 +12,31 @@ export const options: INodeProperties[] = [
         value: 'message',
         description: 'When a message is sent in the selected channels',
       },
+      {
+				name: 'User Join',
+				value: 'user-join',
+				description: 'When a user joins the server',
+			},
+			{
+				name: 'User Leave',
+				value: 'user-leave',
+				description: 'When a user leaves the server',
+			},
+      {
+				name: 'Role Add',
+				value: 'role-create',
+				description: 'When a new role is created on the server',
+			},
+			{
+				name: 'Role Delete',
+				value: 'role-delete',
+				description: 'When a role is deleted on the server',
+			},
+			{
+				name: 'Role Update',
+				value: 'role-update',
+				description: 'When an existing role is updated on the server',
+			},
     ],
     default: 'message',
     description: 'Type of event to listen to. User events must specify a channel to listen to if you want to use a placeholder or the option "send to the trigger channel" in a Discord Send node.',
@@ -23,7 +48,7 @@ export const options: INodeProperties[] = [
     type: 'multiOptions',
     displayOptions: {
       show: {
-        type: ['message'],
+        type: ['message', 'user-join', 'user-leave', 'role-create', 'role-delete', 'role-update'],
       },
     },
     typeOptions: {
@@ -170,14 +195,6 @@ export const options: INodeProperties[] = [
     required: true,
     default: '',
     description: 'The message ID of the button/select to listen to',
-  },
-  {
-    displayName: 'Placeholder',
-    name: 'placeholder',
-    type: 'string',
-
-    default: '',
-    description: 'The placeholder is a message that will appear in the channel that triggers the workflow. Three animated dots added to the placeholder indicate that the workflow is running. From a Discord Send node, you can set up a response message which will then take the place of this placeholder.',
   },
   {
     displayName: 'Additional Fields',
