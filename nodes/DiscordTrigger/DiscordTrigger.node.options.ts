@@ -13,16 +13,6 @@ export const options: INodeProperties[] = [
         description: 'When a message is sent in the selected channels',
       },
       {
-				name: 'User Join',
-				value: 'user-join',
-				description: 'When a user joins the server',
-			},
-			{
-				name: 'User Leave',
-				value: 'user-leave',
-				description: 'When a user leaves the server',
-			},
-      {
 				name: 'Role Add',
 				value: 'role-create',
 				description: 'When a new role is created on the server',
@@ -36,6 +26,16 @@ export const options: INodeProperties[] = [
 				name: 'Role Update',
 				value: 'role-update',
 				description: 'When an existing role is updated on the server',
+			},
+      {
+				name: 'User Join',
+				value: 'user-join',
+				description: 'When a user joins the server',
+			},
+			{
+				name: 'User Leave',
+				value: 'user-leave',
+				description: 'When a user leaves the server',
 			},
     ],
     default: 'message',

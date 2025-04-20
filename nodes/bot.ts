@@ -44,6 +44,126 @@ export default function () {
         client.on('messageCreate', onMessageCreate);
     });
 
+    client.on('guildMemberAdd', (guildMember) => {
+        for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
+            try {
+                if('user-join' !== parameters.type)
+                    continue; 
+
+                if(parameters.guildIds.length && !parameters.guildIds.includes(guildMember.guild.id))
+                    continue;
+
+                ipc.server.emit(parameters.socket, 'guildMemberAdd', {
+                    guildMember: guildMember,
+                    guild: guildMember.guild,
+                    user: guildMember.user,
+                    nodeId: nodeId
+                });
+
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    });
+
+    client.on('guildMemberRemove', (guildMember) => {
+        for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
+            try {
+                if('user-leave' !== parameters.type)
+                    continue; 
+
+                if(parameters.guildIds.length && !parameters.guildIds.includes(guildMember.guild.id))
+                    continue;
+
+                ipc.server.emit(parameters.socket, 'guildMemberRemove', {
+                    guildMember: guildMember,
+                    guild: guildMember.guild,
+                    user: guildMember.user,
+                    nodeId: nodeId
+                });
+
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    });
+
+    client.on('roleCreate', (role) => {
+        for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
+            try {
+                if('role-create' !== parameters.type)
+                    continue; 
+
+                if(parameters.guildIds.length && !parameters.guildIds.includes(role.guild.id))
+                    continue;
+
+                ipc.server.emit(parameters.socket, 'roleCreate', {
+                    role: role,
+                    guild: role.guild,
+                    nodeId: nodeId
+                });
+
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    });
+
+    client.on('roleDelete', (role) => {
+        for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
+            try {
+                if('role-delete' !== parameters.type)
+                    continue; 
+
+                if(parameters.guildIds.length && !parameters.guildIds.includes(role.guild.id))
+                    continue;
+
+                ipc.server.emit(parameters.socket, 'roleDelete', {
+                    role: role,
+                    guild: role.guild,
+                    nodeId: nodeId
+                });
+
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    });
+
+    client.on('roleUpdate', (oldRole, newRole) => {
+        if (
+            oldRole.name === newRole.name &&
+            oldRole.color === newRole.color &&
+            oldRole.hoist === newRole.hoist &&
+            oldRole.permissions.bitfield === newRole.permissions.bitfield &&
+            oldRole.mentionable === newRole.mentionable &&
+            oldRole.icon === newRole.icon &&
+            oldRole.unicodeEmoji === newRole.unicodeEmoji
+        ) {
+            return; // Skip processing if no meaningful changes were made
+        }
+
+        for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
+            try {
+                if('role-update' !== parameters.type)
+                    continue; 
+
+                if(parameters.guildIds.length && !parameters.guildIds.includes(oldRole.guild.id))
+                    continue;
+
+                ipc.server.emit(parameters.socket, 'roleUpdate', {
+                    oldRole,
+                    newRole,
+                    guild: oldRole.guild,
+                    nodeId: nodeId
+                });
+
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    });
+
     // whenever a message is created this listener is called
     const onMessageCreate = async (message: Message) => {
 
@@ -54,6 +174,9 @@ export default function () {
         // iterate through all nodes and see if we need to trigger some                
         for (const [nodeId, parameters] of Object.entries(settings.triggerNodes) as [string, any]) {
             try {
+                if('message' !== parameters.type)
+                    continue; 
+
                 const pattern = parameters.pattern;
 
                 const triggerOnExternalBot = parameters.additionalFields?.externalBotTrigger || false;
@@ -123,6 +246,7 @@ export default function () {
                     ipc.server.emit(parameters.socket, 'messageCreate', {
                         message,
                         messageReference,
+                        guild: message?.guild,
                         referenceAuthor: messageReference?.author,
                         author: message.author,
                         nodeId: nodeId
