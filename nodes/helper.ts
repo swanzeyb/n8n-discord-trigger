@@ -8,7 +8,7 @@ export interface ICredentials {
 	baseUrl?: string; // Optional based on usage
 }
 
-export const connection = (credentials: ICredentials): Promise<string> => {
+export const connection = (credentials: ICredentials): Promise<string | void> => {
 	return new Promise((resolve, reject) => {
 		if (!credentials || !credentials.token || !credentials.clientId) {
 			reject('credentials missing');
@@ -50,8 +50,7 @@ export const connection = (credentials: ICredentials): Promise<string> => {
 			server.on('disconnect', () => {
 				clearTimeout(timeout);
 				console.log('IPC Disconnected');
-				// Optionally reject or handle disconnection
-				// reject('IPC disconnected');
+				resolve(undefined); // Resolve the promise on disconnect
 			});
 		});
 	});
