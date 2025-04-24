@@ -1,23 +1,6 @@
-const settings: {
-    ready: boolean;
-    login: boolean;
-    testMode: boolean;
-    clientId: string;
-    token: string;
-    baseUrl: string;
-    parameters: any;
+// This file previously held global state for a single bot instance.
+// With the multi-credential architecture, state is managed within BotInstance objects
+// managed by the BotManager in bot.ts.
+// This file is no longer needed for state management.
 
-    triggerNodes: any;
-} = {
-    ready: false,
-    login: false,
-    testMode: false,
-    clientId: '',
-    token: '',
-    baseUrl: '',
-    parameters: {},
-
-    triggerNodes: {},
-}
-
-export default settings;
+// export default {}; // Export empty object or remove file if no longer imported.
