@@ -94,8 +94,17 @@ export class DiscordTrigger implements INodeType {
 
 		await connection(credentials).catch((e) => e);
 
-		ipc.connectTo('bot', () => {
-			console.log('Connected to IPC server');
+		// Connect to the correct IPC server ID
+		ipc.connectTo('discord-bot-server', () => {
+			console.log('Connected to IPC server (discord-bot-server)');
+
+			// Use the correct server reference
+			const server = ipc.of['discord-bot-server'];
+			if (!server) {
+				console.error('Failed to get IPC server reference (discord-bot-server)');
+				// Optionally handle error, maybe reject or return empty
+				return;
+			}
 
 			const parameters: any = {};
 			Object.keys(this.getNode().parameters).forEach((key) => {
@@ -104,14 +113,16 @@ export class DiscordTrigger implements INodeType {
 
 			console.log('registering ', this.getNode().id, '... ', parameters);
 
-			ipc.of.bot.emit('triggerNodeRegistered', {
+			// Emit using the correct server reference
+			server.emit('triggerNodeRegistered', {
 				parameters,
 				active: this.getWorkflow().active,
 				credentials,
 				nodeId: this.getNode().id, // Unique to each node
 			});
 
-			ipc.of.bot.on(
+			// Listen using the correct server reference
+			server.on(
 				'messageCreate',
 				({ message, author, guild, nodeId, messageReference, referenceAuthor }: any) => {
 					if (this.getNode().id === nodeId) {
@@ -145,31 +156,36 @@ export class DiscordTrigger implements INodeType {
 				},
 			);
 
-			ipc.of.bot.on('guildMemberAdd', ({ guildMember, guild, user, nodeId }) => {
+			// Listen using the correct server reference
+			server.on('guildMemberAdd', ({ guildMember, guild, user, nodeId }) => {
 				if (this.getNode().id === nodeId) {
 					this.emit([this.helpers.returnJsonArray(guildMember)]);
 				}
 			});
 
-			ipc.of.bot.on('guildMemberRemove', ({ guildMember, guild, user, nodeId }) => {
+			// Listen using the correct server reference
+			server.on('guildMemberRemove', ({ guildMember, guild, user, nodeId }) => {
 				if (this.getNode().id === nodeId) {
 					this.emit([this.helpers.returnJsonArray(guildMember)]);
 				}
 			});
 
-			ipc.of.bot.on('roleCreate', ({ role, guild, nodeId }) => {
+			// Listen using the correct server reference
+			server.on('roleCreate', ({ role, guild, nodeId }) => {
 				if (this.getNode().id === nodeId) {
 					this.emit([this.helpers.returnJsonArray(role)]);
 				}
 			});
 
-			ipc.of.bot.on('roleDelete', ({ role, guild, nodeId }) => {
+			// Listen using the correct server reference
+			server.on('roleDelete', ({ role, guild, nodeId }) => {
 				if (this.getNode().id === nodeId) {
 					this.emit([this.helpers.returnJsonArray(role)]);
 				}
 			});
 
-			ipc.of.bot.on('roleUpdate', ({ oldRole, newRole, guild, nodeId }) => {
+			// Listen using the correct server reference
+			server.on('roleUpdate', ({ oldRole, newRole, guild, nodeId }) => {
 				if (this.getNode().id === nodeId) {
 					const addPrefix = (obj: any, prefix: string) =>
 						Object.fromEntries(
@@ -189,15 +205,23 @@ export class DiscordTrigger implements INodeType {
 			});
 		});
 
-		ipc.of.bot.on('disconnect', () => {
-			console.error('Disconnected from IPC server');
+		// Listen for disconnect on the correct server ID
+		ipc.of['discord-bot-server']?.on('disconnect', () => {
+			// Added optional chaining for safety
+			console.error('Disconnected from IPC server (discord-bot-server)');
 		});
 
 		// Return the cleanup function
 		return {
 			closeFunction: async () => {
-				// Only disconnect the bot
-				ipc.disconnect('bot');
+				// Disconnect from the correct server ID
+				ipc.disconnect('discord-bot-server');
+				console.log(`IPC disconnected for node ${this.getNode().id}`);
+				// Also inform the server to remove the node registration
+				const server = ipc.of['discord-bot-server'];
+				if (server) {
+					server.emit('triggerNodeRemoved', { nodeId: this.getNode().id });
+				}
 			},
 		};
 	}
