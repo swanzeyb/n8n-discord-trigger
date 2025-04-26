@@ -1275,7 +1275,8 @@ export class IPCRouter {
 // --- Standalone Utility Functions ---
 
 // Moved prepareMessage outside classes as it's a utility
-function prepareMessage(nodeParameters: any): any {
+// ---> ADDED export <-----
+export function prepareMessage(nodeParameters: any): any {
 	// prepare embed messages, if they are set by the client
 	const embedFiles: AttachmentBuilder[] = []; // Use AttachmentBuilder type
 	let embed: EmbedBuilder | undefined;
