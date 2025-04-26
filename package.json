@@ -33,7 +33,7 @@
 		"lint": "eslint nodes credentials package.json",
 		"lintfix": "eslint nodes credentials package.json --fix",
 		"prepublishOnly": "pnpm build && pnpm lint -c .eslintrc.prepublish.js nodes credentials package.json",
-		"test": "jest",
+		"test": "jest --runInBand --no-cache --verbose --detectOpenHandles --silent=false --testLocationInResults --reporters=default --no-watchman --watchAll=false",
 		"n8n:run": "N8N_RUNNERS_ENABLED=true n8n"
 	},
 	"files": [
