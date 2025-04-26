@@ -346,11 +346,17 @@ class BotInstance {
 		}
 	}
 
-	async fetchChannels(guildIds: string[]): Promise<{ name: string; value: string }[]> {
+	async fetchChannels(
+		guildIdsInput: string | string[],
+	): Promise<{ name: string; value: string }[]> {
+		// Changed parameter name
 		if (!this.state.ready) {
 			console.warn(`Bot ${this.credentials.clientId} is not ready. Cannot fetch channels.`);
 			return [];
 		}
+		// Ensure guildIds is always an array
+		const guildIds = Array.isArray(guildIdsInput) ? guildIdsInput : [guildIdsInput];
+
 		const results: { name: string; value: string }[] = [];
 		try {
 			for (const guildId of guildIds) {
@@ -903,12 +909,12 @@ export class IPCRouter {
 	// ---> MODIFIED: Make initialize static <---
 	static initialize() {
 		// Configure IPC server
-		ipc.config.id = 'discord-bot-server'; // Changed ID
+		ipc.config.id = 'bot'; // Reverted ID to match client expectation
 		ipc.config.retry = 1500;
 		ipc.config.silent = false; // Make IPC less silent for debugging
 
 		ipc.serve(() => {
-			console.log('IPC server started (discord-bot-server)');
+			console.log('IPC server started (bot)'); // Updated log message
 
 			// ---> ADDED: Server-side event listeners <---
 			ipc.server.on('connect', (socket: any) => {

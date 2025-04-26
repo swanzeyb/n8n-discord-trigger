@@ -9,13 +9,13 @@ import {
 	NodeConnectionType,
 } from 'n8n-workflow';
 import { options } from './DiscordInteraction.node.options';
-import ipc from 'node-ipc';
 import {
-	connection,
+	connection, // Re-added import
 	ICredentials,
 	getChannels as getChannelsHelper,
 	getRoles as getRolesHelper,
 	getGuilds as getGuildsHelper,
+	ipcRequest, // Import ipcRequest
 } from '../helper';
 
 export interface IDiscordInteractionMessageParameters {
@@ -124,102 +124,188 @@ export class DiscordInteraction implements INodeType {
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		// @ts-ignore
 		const executionId = this.getExecutionId();
 
 		// fetch credentials
-		const credentials = (await this.getCredentials('discordBotTriggerApi').catch(
-			(e) => e,
-		)) as any as ICredentials;
-
-		// create connection to bot.
-		await connection(credentials).catch((e) => {
-			console.log(e);
-			if (this.getNodeParameter('type', 0) === 'confirm') {
-				const returnData: INodeExecutionData[][] = [[], [], []];
-				returnData[2] = this.getInputData();
-				return returnData;
-			} else {
-				return this.prepareOutputData(this.getInputData());
-			}
-		});
-
-		if (this.getNodeParameter('type', 0) === 'confirm') {
-			const returnData: INodeExecutionData[][] = [[], [], []];
-			// create connection to bot.
-			await connection(credentials).catch((e) => {
-				console.log(e);
-				returnData[2] = this.getInputData();
-				return returnData;
+		let credentials: ICredentials; // Declare with the correct type
+		try {
+			const credentialData = await this.getCredentials('discordBotTriggerApi').catch((e) => {
+				throw e;
 			});
+			// Use type guards to ensure properties exist and are strings
+			if (
+				!credentialData ||
+				typeof credentialData.clientId !== 'string' ||
+				typeof credentialData.token !== 'string'
+			) {
+				throw new NodeOperationError(
+					this.getNode(),
+					'Credentials not found or incomplete (missing clientId or token)!',
+				);
+			}
+			// Assign properties directly after validation
+			credentials = {
+				clientId: credentialData.clientId,
+				token: credentialData.token,
+				// Include optional properties if they exist and are strings
+				apiKey: typeof credentialData.apiKey === 'string' ? credentialData.apiKey : undefined,
+				baseUrl: typeof credentialData.baseUrl === 'string' ? credentialData.baseUrl : undefined,
+			};
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			throw new NodeOperationError(this.getNode(), `Failed to get credentials: ${errorMessage}`);
+		}
 
-			// Prepare the node parameters to send to the bot
+		// Ensure the bot instance for these credentials is ready before proceeding
+		try {
+			await connection(credentials);
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			// Handle connection errors appropriately, maybe rethrow or return error data
+			throw new NodeOperationError(
+				this.getNode(),
+				`Failed to establish connection with bot process: ${errorMessage}`,
+			);
+		}
 
+		const type = this.getNodeParameter('type', 0) as string;
+
+		// Define keys that belong in messageOptions
+		const messageOptionKeys = [
+			'content',
+			'embed',
+			'title',
+			'description',
+			'url',
+			'color',
+			'timestamp',
+			'footerText',
+			'footerIconUrl',
+			'imageUrl',
+			'thumbnailUrl',
+			'authorName',
+			'authorIconUrl',
+			'authorUrl',
+			'fields',
+			'files',
+			'mentionRoles',
+			'mentionUsers', // Added mentionUsers
+			'messageIdToReply',
+			'failReplyIfNotExists',
+		];
+
+		if (type === 'confirm') {
+			const returnData: INodeExecutionData[][] = [[], [], []];
 			const nodeParameters: Record<string, any> = {};
 			Object.keys(this.getNode().parameters).forEach((key) => {
 				nodeParameters[key] = this.getNodeParameter(key, 0, '');
 			});
+			nodeParameters.executionId = executionId; // Add executionId
 
-			const response: any = await new Promise((resolve) => {
-				ipc.config.retry = 1500;
-				ipc.connectTo('bot', () => {
-					const type = `send:confirmation`;
-					ipc.of.bot.on(`callback:send:confirmation`, (data: any) => {
-						console.log('user decided', data);
-						resolve(data);
-					});
-
-					// send event to bot
-					ipc.of.bot.emit(type, nodeParameters);
-				});
+			// Construct messageOptions
+			const messageOptions: Record<string, any> = {};
+			messageOptionKeys.forEach((key) => {
+				if (nodeParameters[key] !== undefined) {
+					messageOptions[key] = nodeParameters[key];
+				}
 			});
-			console.log(response);
 
-			if (response.confirmed === null) returnData[2] = this.getInputData();
-			else if (response.confirmed === true) returnData[0] = this.getInputData();
-			else returnData[1] = this.getInputData();
+			// Construct payload
+			const payload = {
+				channelId: nodeParameters.channelId,
+				messageOptions: messageOptions,
+				timeout: nodeParameters.timeout,
+				// executionId: executionId, // executionId is part of nodeParameters, maybe not needed here if bot.ts doesn't expect it separately for confirmation
+			};
+
+			try {
+				// Use ipcRequest helper
+				const response = await ipcRequest('send:confirmation', payload, credentials);
+				console.log('Confirmation response:', response);
+
+				if (response.confirmed === null)
+					returnData[2] = this.getInputData(); // Timeout/Error branch
+				else if (response.confirmed === true)
+					returnData[0] = this.getInputData(); // Yes branch
+				else returnData[1] = this.getInputData(); // No branch
+			} catch (error: any) {
+				console.error('Confirmation IPC request failed:', error);
+				// Assume timeout/error path on failure
+				returnData[2] = this.getInputData();
+				// Optionally re-throw or handle specific errors
+				// throw new NodeOperationError(this.getNode(), `Confirmation failed: ${error.message}`);
+			}
 
 			return returnData;
 		} else {
+			// Handle 'message' and 'action' types
 			const returnData: INodeExecutionData[] = [];
-			// iterate over all nodes
 			const items: INodeExecutionData[] = this.getInputData();
+
 			for (let itemIndex: number = 0; itemIndex < items.length; itemIndex++) {
-				const nodeParameters: any = {};
-				Object.keys(this.getNode().parameters).forEach((key) => {
-					nodeParameters[key] = this.getNodeParameter(key, itemIndex, '') as any;
-				});
-				nodeParameters.executionId = executionId;
-
-				if (nodeParameters.channelId || nodeParameters.executionId) {
-					// return the interaction result if there is one
-					const res: any = new Promise((resolve) => {
-						ipc.config.retry = 1500;
-						ipc.connectTo('bot', () => {
-							const type = `send:${nodeParameters.type}`;
-							ipc.of.bot.on(`callback:${type}`, (data: any) => {
-								resolve(data);
-							});
-
-							// send event to bot
-							ipc.of.bot.emit(type, nodeParameters);
-						});
-					}).catch((e) => {
-						console.log(e);
-						return this.prepareOutputData(this.getInputData());
+				try {
+					const nodeParameters: any = {};
+					Object.keys(this.getNode().parameters).forEach((key) => {
+						nodeParameters[key] = this.getNodeParameter(key, itemIndex, '') as any;
 					});
+					nodeParameters.executionId = executionId; // Add executionId
 
+					const interactionType = nodeParameters.type as string; // 'message' or 'action'
+					let payload: any;
+					let eventType: string;
+
+					if (interactionType === 'message') {
+						eventType = 'send:message';
+						// Construct messageOptions
+						const messageOptions: Record<string, any> = {};
+						messageOptionKeys.forEach((key) => {
+							if (nodeParameters[key] !== undefined) {
+								messageOptions[key] = nodeParameters[key];
+							}
+						});
+						payload = {
+							channelId: nodeParameters.channelId,
+							messageOptions: messageOptions,
+							// executionId: executionId, // If needed by handler
+						};
+					} else if (interactionType === 'action') {
+						eventType = 'send:action';
+						// Payload includes credentials merged with nodeParameters for action
+						payload = { ...nodeParameters }; // Pass all node params for action
+					} else {
+						throw new NodeOperationError(
+							this.getNode(),
+							`Unsupported interaction type: ${interactionType}`,
+						);
+					}
+
+					// Use ipcRequest helper
+					const res = await ipcRequest(eventType, payload, credentials);
+
+					// Process result (assuming ipcRequest resolves with the callback data)
 					returnData.push({
 						json: {
-							value: res?.value,
-							channelId: res?.channelId,
-							userId: res?.userId,
-							userName: res?.userName,
-							userTag: res?.userTag,
-							messageId: res?.messageId,
-							action: res?.action,
+							...(res || {}), // Include all properties from the response
+							// Ensure specific fields are present if needed downstream
+							// value: res?.value,
+							// channelId: res?.channelId,
+							// userId: res?.userId,
+							// userName: res?.userName,
+							// userTag: res?.userTag,
+							// messageId: res?.messageId,
+							// action: res?.action,
 						},
+						pairedItem: { item: itemIndex }, // Ensure pairing if needed
 					});
+				} catch (error: any) {
+					if (this.continueOnFail()) {
+						returnData.push({
+							json: { error: error instanceof Error ? error.message : String(error) },
+							pairedItem: { item: itemIndex },
+						});
+						continue;
+					}
+					throw error; // Re-throw if not continuing on fail
 				}
 			}
 

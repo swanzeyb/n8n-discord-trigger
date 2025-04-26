@@ -19,9 +19,9 @@ export const connection = (credentials: ICredentials): Promise<string | void> =>
 
 		ipc.config.retry = 1500;
 		// Connect to the new server ID
-		ipc.connectTo('discord-bot-server', () => {
+		ipc.connectTo('bot', () => {
 			// Use the correct reference
-			const server = ipc.of['discord-bot-server'];
+			const server = ipc.of['bot'];
 			if (!server) {
 				clearTimeout(timeout);
 				reject('IPC connection failed');
@@ -78,8 +78,8 @@ export const getChannels = async (
 			const timeout = setTimeout(() => resolve('Request timed out'), 15000);
 
 			ipc.config.retry = 1500;
-			ipc.connectTo('discord-bot-server', () => {
-				const server = ipc.of['discord-bot-server'];
+			ipc.connectTo('bot', () => {
+				const server = ipc.of['bot'];
 				if (!server) {
 					clearTimeout(timeout);
 					resolve('IPC connection failed');
@@ -144,8 +144,8 @@ export const getGuilds = async (that: any): Promise<INodePropertyOptions[]> => {
 			const timeout = setTimeout(() => resolve('Request timed out'), 15000);
 
 			ipc.config.retry = 1500;
-			ipc.connectTo('discord-bot-server', () => {
-				const server = ipc.of['discord-bot-server'];
+			ipc.connectTo('bot', () => {
+				const server = ipc.of['bot'];
 				if (!server) {
 					clearTimeout(timeout);
 					resolve('IPC connection failed');
@@ -218,8 +218,8 @@ export const getRoles = async (
 			const timeout = setTimeout(() => resolve('Request timed out'), 15000);
 
 			ipc.config.retry = 1500;
-			ipc.connectTo('discord-bot-server', () => {
-				const server = ipc.of['discord-bot-server'];
+			ipc.connectTo('bot', () => {
+				const server = ipc.of['bot'];
 				if (!server) {
 					clearTimeout(timeout);
 					resolve('IPC connection failed');
@@ -277,8 +277,8 @@ export const ipcRequest = (
 		const timeout = setTimeout(() => reject(new Error(`${type} request timed out`)), 15000); // Reject on timeout
 
 		ipc.config.retry = 1500;
-		ipc.connectTo('discord-bot-server', () => {
-			const server = ipc.of['discord-bot-server'];
+		ipc.connectTo('bot', () => {
+			const server = ipc.of['bot'];
 			if (!server) {
 				clearTimeout(timeout);
 				reject(new Error('IPC connection failed'));

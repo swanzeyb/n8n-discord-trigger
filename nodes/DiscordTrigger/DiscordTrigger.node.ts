@@ -119,9 +119,9 @@ export class DiscordTrigger implements INodeType {
 			nodeId: string,
 			triggerParams: IDataObject,
 		) => {
-			const server = ipcInstance.of['discord-bot-server'];
+			const server = ipcInstance.of['bot'];
 			if (!server) {
-				console.error(`[Node ${nodeId}] IPC server reference 'discord-bot-server' not found.`);
+				console.error(`[Node ${nodeId}] IPC server reference 'bot' not found.`);
 				return;
 			}
 			server.on('discordMessage', (messageData: { node: string; data: IDataObject }) => {
@@ -140,17 +140,17 @@ export class DiscordTrigger implements INodeType {
 				triggerParameters[key] = this.getNodeParameter(key) as any;
 			});
 
-			console.log(`Attempting to connect to IPC server 'discord-bot-server' for node ${nodeId}...`);
+			console.log(`Attempting to connect to IPC server 'bot' for node ${nodeId}...`);
 			ipc.config.stopRetrying = false;
 			ipc.config.maxRetries = 3;
 			ipc.config.silent = false;
 
-			console.log(`[Node ${nodeId}] Initiating ipc.connectTo('discord-bot-server')...`);
+			console.log(`[Node ${nodeId}] Initiating ipc.connectTo('bot')...`);
 
-			ipc.connectTo('discord-bot-server', () => {
+			ipc.connectTo('bot', () => {
 				console.log(`[Node ${nodeId}] ipc.connectTo callback executed.`);
 
-				const server = ipc.of['discord-bot-server'];
+				const server = ipc.of['bot'];
 				if (!server) {
 					console.error(`[Node ${nodeId}] Failed to get IPC server reference in connect callback.`);
 					reject(
@@ -178,7 +178,7 @@ export class DiscordTrigger implements INodeType {
 
 				// Setup listeners for disconnect and error
 				server.on('disconnect', () => {
-					console.log(`[Node ${nodeId}] Disconnected from IPC server 'discord-bot-server'.`);
+					console.log(`[Node ${nodeId}] Disconnected from IPC server 'bot'.`);
 					ipcConnected = false;
 				});
 
@@ -203,9 +203,9 @@ export class DiscordTrigger implements INodeType {
 					closeFunction: async () => {
 						console.log(`[Node ${nodeId}] Closing trigger. Disconnecting from IPC.`);
 						if (ipcConnected) {
-							if (ipc.of['discord-bot-server']) {
-								ipc.of['discord-bot-server'].emit('triggerNodeUnregistered', { nodeId });
-								ipc.disconnect('discord-bot-server');
+							if (ipc.of['bot']) {
+								ipc.of['bot'].emit('triggerNodeUnregistered', { nodeId });
+								ipc.disconnect('bot');
 							} else {
 								console.warn(`[Node ${nodeId}] IPC server reference not found during close.`);
 							}
