@@ -216,7 +216,9 @@ export class DiscordTrigger implements INodeType {
 							ipcConnected = false; // ---> Set ipcConnected to false after attempting disconnect
 							// console.log(`[Node ${nodeId}] Disconnected from IPC server.`); // ---> Redundant log? ipc.disconnect is async
 						} else {
-							console.log(`[Node ${nodeId}] Already disconnected from IPC, skipping unregister emit.`); // ---> Added log
+							console.log(
+								`[Node ${nodeId}] Already disconnected from IPC, skipping unregister emit.`,
+							); // ---> Added log
 						}
 					},
 				});

@@ -201,13 +201,11 @@ jest.mock('discord.js', () => {
 		member: mockMember,
 		mentions: { users: mockUserMentions, roles: mockRoleMentions }, // Use MockCollection instances
 		reference: null,
-		fetchReference: jest
-			.fn()
-			.mockResolvedValue({
-				id: 'ref-msg-1',
-				author: mockUser,
-				toJSON: jest.fn(() => ({ id: 'ref-msg-1' })),
-			}),
+		fetchReference: jest.fn().mockResolvedValue({
+			id: 'ref-msg-1',
+			author: mockUser,
+			toJSON: jest.fn(() => ({ id: 'ref-msg-1' })),
+		}),
 		delete: jest.fn().mockResolvedValue({}),
 		toJSON: jest.fn(() => ({ id: 'msg-1', content: 'Hello', authorId: 'user-1' })),
 	};
@@ -469,9 +467,9 @@ describe('IPCRouter', () => {
 		// Assertions
 		expect(getBotByCredentialsMock).toHaveBeenCalledWith(mockCredentials);
 		expect(fetchGuildsMock).not.toHaveBeenCalled();
-		// ---> UPDATED: Expect error object instead of empty array <---
+		// ---> UPDATED: Expect error object with the connection failure message <---
 		expect(mockIpcServer.emit).toHaveBeenCalledWith(mockSocket, 'list:guilds', {
-			error: 'Bot bot-1 not found or not ready.',
+			error: 'Failed to connect bot bot-1 for list:guilds: Invalid Token',
 		});
 	});
 
@@ -602,8 +600,9 @@ describe('IPCRouter', () => {
 		await handler(actionData, mockSocket);
 
 		expect(getBotByCredentialsMock).toHaveBeenCalledWith(mockCredentials);
-		// Expect the full actionData object, including credentials
-		expect(performActionMock).toHaveBeenCalledWith(actionData);
+		// Expect the actionData object *without* credentials
+		const { credentials, ...expectedActionParams } = actionData;
+		expect(performActionMock).toHaveBeenCalledWith(expectedActionParams);
 		expect(mockIpcServer.emit).toHaveBeenCalledWith(mockSocket, 'callback:send:action', {
 			success: true,
 		});

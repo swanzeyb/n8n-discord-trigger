@@ -992,15 +992,33 @@ export class IPCRouter {
 				return this.emitToNode(socket, 'list:guilds', { error: 'Missing credentials' });
 			}
 			try {
-				const botInstance = this.botManager.getBotByCredentials(data.credentials);
-				// ---> Check if bot instance exists AND is ready <---
+				let botInstance = this.botManager.getBotByCredentials(data.credentials); // Use let
+
+				// ---> ADDED: Attempt connection if bot not found or not ready <---
 				if (!botInstance || !botInstance.isReady()) {
-					const errorMsg = `Bot ${data.credentials.clientId} not found or not ready.`;
-					console.warn(`list:guilds requested: ${errorMsg}`);
-					// ---> Return error object <---
-					this.emitToNode(socket, 'list:guilds', { error: errorMsg });
-					return;
+					console.log(
+						`Bot ${data.credentials.clientId} not found or not ready. Attempting connection...`,
+					);
+					const { status, error } = await this.botManager.connectBot(data.credentials);
+					if (status === 'error') {
+						const errorMsg = `Failed to connect bot ${data.credentials.clientId} for list:guilds: ${error}`;
+						console.error(errorMsg);
+						this.emitToNode(socket, 'list:guilds', { error: errorMsg });
+						return;
+					}
+					// Re-fetch instance after connection attempt
+					botInstance = this.botManager.getBotByCredentials(data.credentials);
+					if (!botInstance || !botInstance.isReady()) {
+						// Check again
+						const errorMsg = `Bot ${data.credentials.clientId} still not ready after connection attempt.`;
+						console.warn(`list:guilds requested: ${errorMsg}`);
+						this.emitToNode(socket, 'list:guilds', { error: errorMsg });
+						return;
+					}
+					console.log(`Bot ${data.credentials.clientId} connected successfully.`);
 				}
+				// ---> END ADDED <---
+
 				// ---> Fetch guilds (consider forceRefresh=false unless needed) <---
 				const guilds = await botInstance.fetchGuilds(false);
 				this.emitToNode(socket, 'list:guilds', guilds);
@@ -1019,18 +1037,38 @@ export class IPCRouter {
 				if (!data || !data.credentials || !data.guildIds) {
 					console.error('list:channels request missing credentials or guildIds.');
 					// ---> Return error object <---
-					return this.emitToNode(socket, 'list:channels', { error: 'Missing credentials or guildIds' });
+					return this.emitToNode(socket, 'list:channels', {
+						error: 'Missing credentials or guildIds',
+					});
 				}
 				try {
-					const botInstance = this.botManager.getBotByCredentials(data.credentials);
-					// ---> Check if bot instance exists AND is ready <---
+					let botInstance = this.botManager.getBotByCredentials(data.credentials); // Use let
+
+					// ---> ADDED: Attempt connection if bot not found or not ready <---
 					if (!botInstance || !botInstance.isReady()) {
-						const errorMsg = `Bot ${data.credentials.clientId} not found or not ready.`;
-						console.warn(`list:channels requested: ${errorMsg}`);
-						// ---> Return error object <---
-						this.emitToNode(socket, 'list:channels', { error: errorMsg });
-						return;
+						console.log(
+							`Bot ${data.credentials.clientId} not found or not ready. Attempting connection...`,
+						);
+						const { status, error } = await this.botManager.connectBot(data.credentials);
+						if (status === 'error') {
+							const errorMsg = `Failed to connect bot ${data.credentials.clientId} for list:channels: ${error}`;
+							console.error(errorMsg);
+							this.emitToNode(socket, 'list:channels', { error: errorMsg });
+							return;
+						}
+						// Re-fetch instance after connection attempt
+						botInstance = this.botManager.getBotByCredentials(data.credentials);
+						if (!botInstance || !botInstance.isReady()) {
+							// Check again
+							const errorMsg = `Bot ${data.credentials.clientId} still not ready after connection attempt.`;
+							console.warn(`list:channels requested: ${errorMsg}`);
+							this.emitToNode(socket, 'list:channels', { error: errorMsg });
+							return;
+						}
+						console.log(`Bot ${data.credentials.clientId} connected successfully.`);
 					}
+					// ---> END ADDED <---
+
 					const channels = await botInstance.fetchChannels(data.guildIds);
 					this.emitToNode(socket, 'list:channels', channels);
 				} catch (error: any) {
@@ -1049,18 +1087,38 @@ export class IPCRouter {
 				if (!data || !data.credentials || !data.guildIds) {
 					console.error('list:roles request missing credentials or guildIds.');
 					// ---> Return error object <---
-					return this.emitToNode(socket, 'list:roles', { error: 'Missing credentials or guildIds' });
+					return this.emitToNode(socket, 'list:roles', {
+						error: 'Missing credentials or guildIds',
+					});
 				}
 				try {
-					const botInstance = this.botManager.getBotByCredentials(data.credentials);
-					// ---> Check if bot instance exists AND is ready <---
+					let botInstance = this.botManager.getBotByCredentials(data.credentials); // Use let
+
+					// ---> ADDED: Attempt connection if bot not found or not ready <---
 					if (!botInstance || !botInstance.isReady()) {
-						const errorMsg = `Bot ${data.credentials.clientId} not found or not ready.`;
-						console.warn(`list:roles requested: ${errorMsg}`);
-						// ---> Return error object <---
-						this.emitToNode(socket, 'list:roles', { error: errorMsg });
-						return;
+						console.log(
+							`Bot ${data.credentials.clientId} not found or not ready. Attempting connection...`,
+						);
+						const { status, error } = await this.botManager.connectBot(data.credentials);
+						if (status === 'error') {
+							const errorMsg = `Failed to connect bot ${data.credentials.clientId} for list:roles: ${error}`;
+							console.error(errorMsg);
+							this.emitToNode(socket, 'list:roles', { error: errorMsg });
+							return;
+						}
+						// Re-fetch instance after connection attempt
+						botInstance = this.botManager.getBotByCredentials(data.credentials);
+						if (!botInstance || !botInstance.isReady()) {
+							// Check again
+							const errorMsg = `Bot ${data.credentials.clientId} still not ready after connection attempt.`;
+							console.warn(`list:roles requested: ${errorMsg}`);
+							this.emitToNode(socket, 'list:roles', { error: errorMsg });
+							return;
+						}
+						console.log(`Bot ${data.credentials.clientId} connected successfully.`);
 					}
+					// ---> END ADDED <---
+
 					const roles = await botInstance.fetchRoles(data.guildIds);
 					this.emitToNode(socket, 'list:roles', roles);
 				} catch (error: any) {
@@ -1107,7 +1165,9 @@ export class IPCRouter {
 				if (node && node.socket === socket) {
 					this.unregisterTriggerNode(data.nodeId);
 				} else if (node) {
-					console.warn(`[IPC Router] Received unregister for node ${data.nodeId} from non-matching socket.`);
+					console.warn(
+						`[IPC Router] Received unregister for node ${data.nodeId} from non-matching socket.`,
+					);
 				} else {
 					console.log(`[IPC Router] Received unregister for already unknown node: ${data.nodeId}`);
 				}
@@ -1115,7 +1175,6 @@ export class IPCRouter {
 				console.warn('[IPC Router] Received malformed triggerNodeUnregistered event.');
 			}
 		});
-
 
 		// Handle message sending
 		ipc.server.on(

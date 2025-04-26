@@ -85,21 +85,25 @@ export const getChannels = async (
 
 				// ---> Use 'once' for the response listener to avoid manual cleanup <---
 				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
-				server.once('list:channels', (data: { name: string; value: string }[] | { error: string }) => {
-					clearTimeout(timeout);
-					// ---> Check for explicit error from bot process <---
-					if (data && typeof data === 'object' && 'error' in data) {
-						resolve(data.error); // Resolve with the error message string
-					} else if (Array.isArray(data)) {
-						resolve(data); // Resolve with the channel list
-					} else {
-						resolve('Invalid response from bot process'); // Handle unexpected response
-					}
-				});
+				server.once(
+					'list:channels',
+					(data: { name: string; value: string }[] | { error: string }) => {
+						clearTimeout(timeout);
+						// ---> Check for explicit error from bot process <---
+						if (data && typeof data === 'object' && 'error' in data) {
+							resolve(data.error); // Resolve with the error message string
+						} else if (Array.isArray(data)) {
+							resolve(data); // Resolve with the channel list
+						} else {
+							resolve('Invalid response from bot process'); // Handle unexpected response
+						}
+					},
+				);
 
 				// ---> Use 'once' for the error listener during this specific request <---
 				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
-				server.once('error', (err: any) => { // ---> Added type any
+				server.once('error', (err: any) => {
+					// ---> Added type any
 					clearTimeout(timeout);
 					console.error('IPC Error during list:channels:', err);
 					resolve('IPC error');
@@ -126,7 +130,8 @@ export const getChannels = async (
 	} else {
 		// ---> Refined message for empty array or permission issues <---
 		const message =
-			'No text channels found in the selected server(s), bot lacks permissions, or bot is not ready.' + endMessage;
+			'No text channels found in the selected server(s), bot lacks permissions, or bot is not ready.' +
+			endMessage;
 		return [{ name: message, value: 'false' }];
 	}
 };
@@ -164,21 +169,25 @@ export const getGuilds = async (that: any): Promise<INodePropertyOptions[]> => {
 
 				// ---> Use 'once' for the response listener <---
 				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
-				server.once('list:guilds', (data: { name: string; value: string }[] | { error: string }) => {
-					clearTimeout(timeout);
-					// ---> Check for explicit error from bot process <---
-					if (data && typeof data === 'object' && 'error' in data) {
-						resolve(data.error); // Resolve with the error message string
-					} else if (Array.isArray(data)) {
-						resolve(data); // Resolve with the guild list
-					} else {
-						resolve('Invalid response from bot process'); // Handle unexpected response
-					}
-				});
+				server.once(
+					'list:guilds',
+					(data: { name: string; value: string }[] | { error: string }) => {
+						clearTimeout(timeout);
+						// ---> Check for explicit error from bot process <---
+						if (data && typeof data === 'object' && 'error' in data) {
+							resolve(data.error); // Resolve with the error message string
+						} else if (Array.isArray(data)) {
+							resolve(data); // Resolve with the guild list
+						} else {
+							resolve('Invalid response from bot process'); // Handle unexpected response
+						}
+					},
+				);
 
 				// ---> Use 'once' for the error listener <---
 				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
-				server.once('error', (err: any) => { // ---> Added type any
+				server.once('error', (err: any) => {
+					// ---> Added type any
 					clearTimeout(timeout);
 					console.error('IPC Error during list:guilds:', err);
 					resolve('IPC error');
@@ -202,8 +211,7 @@ export const getGuilds = async (that: any): Promise<INodePropertyOptions[]> => {
 	} else {
 		// ---> Refined message <---
 		const message =
-			'Bot is not in any guilds, failed to fetch them, or bot is not ready.' +
-			endMessage;
+			'Bot is not in any guilds, failed to fetch them, or bot is not ready.' + endMessage;
 		return [{ name: message, value: 'false' }];
 	}
 };
@@ -263,7 +271,8 @@ export const getRoles = async (
 
 				// ---> Use 'once' for the error listener <---
 				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
-				server.once('error', (err: any) => { // ---> Added type any
+				server.once('error', (err: any) => {
+					// ---> Added type any
 					clearTimeout(timeout);
 					console.error('IPC Error during list:roles:', err);
 					resolve('IPC error');
