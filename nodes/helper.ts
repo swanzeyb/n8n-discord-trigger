@@ -41,16 +41,9 @@ export const connection = (credentials: ICredentials): Promise<string | void> =>
 			});
 
 			// Handle IPC connection errors
-			server.on('error', (err) => {
-				clearTimeout(timeout);
-				console.error('IPC Connection Error:', err);
-				reject('IPC connection error');
-			});
-
-			server.on('disconnect', () => {
-				clearTimeout(timeout);
-				console.log('IPC Disconnected');
-				resolve(undefined); // Resolve the promise on disconnect
+			server.on('error', (error: any) => {
+				console.error('IPC Error:', error);
+				reject(new Error(`IPC Connection Error: ${error.message || error}`));
 			});
 		});
 	});
