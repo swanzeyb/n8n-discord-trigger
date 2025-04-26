@@ -63,7 +63,8 @@ import {} from // Client,
 // ButtonInteraction, // Remove if only used inside mock
 // MessageComponentCollector,
 'discord.js';
-import { IPCRouter, prepareMessage as prepareMessageFunc } from './bot';
+import { IPCRouter } from './bot/IPCRouter'; // Corrected import
+import { prepareMessage as prepareMessageFunc } from './bot/utils'; // Corrected import
 import { ICredentials } from './helper'; // Keep, used for typing
 import { IDiscordNodeActionParameters } from './DiscordInteraction/DiscordInteraction.node'; // Keep, used for typing
 
@@ -339,32 +340,31 @@ describe('IPCRouter', () => {
 	const mockCredentials = { clientId: 'bot-1', token: 'token-1' };
 	const mockSocket = { id: 'socket-1' }; // Mock socket object
 
-	// ---> FIX: Need to re-access the mocked ipc object for beforeEach setup
+	// ---> FIX: Define variables to hold mock instances, get them in beforeEach
+	let mockIpc: any;
 	let mockIpcServer: any;
 	let mockIpcClient: any;
 
 	beforeAll(() => {
-		// IPCRouter.initialize(); // Let's assume initialize runs on import or is called by the main process
-		// ---> FIX: Get the mocked ipc object after mocks are applied
-		const mockIpc = jest.requireMock('node-ipc');
-		mockIpcServer = mockIpc.server;
-		mockIpcClient = mockIpc.of.bot;
+		// No need to capture here anymore
 	});
 
 	beforeEach(() => {
 		// Clear all mocks before each test
 		jest.clearAllMocks();
 
-		// Reset IPC server/client mocks using the variables captured in beforeAll
-		if (mockIpcServer) {
-			mockIpcServer.on.mockClear();
-			mockIpcServer.emit.mockClear();
-			mockIpcServer.broadcast.mockClear();
-		}
-		if (mockIpcClient) {
-			mockIpcClient.on.mockClear();
-			mockIpcClient.emit.mockClear();
-		}
+		// ---> FIX: Re-require the mock *after* clearing to get the fresh mock state
+		mockIpc = jest.requireMock('node-ipc');
+		mockIpcServer = mockIpc.server;
+		mockIpcClient = mockIpc.of.bot;
+
+		// Clear IPC server/client mocks (optional if clearAllMocks is sufficient, but safer)
+		mockIpcServer.on.mockClear();
+		mockIpcServer.emit.mockClear();
+		mockIpcServer.broadcast.mockClear();
+		mockIpcClient.on.mockClear();
+		mockIpcClient.emit.mockClear();
+
 		IPCRouter.registeredNodes.clear(); // Clear registered nodes
 
 		// Re-assign mocks as they might be cleared by jest.clearAllMocks()
@@ -383,8 +383,7 @@ describe('IPCRouter', () => {
 		sendConfirmationMock.mockClear().mockResolvedValue({ success: true, confirmed: true });
 		isReadyMock.mockClear().mockReturnValue(true);
 
-		// Manually register handlers if initialize isn't run in tests
-		// ---> FIX: Access static method correctly
+		// Manually register handlers AFTER mock setup in beforeEach
 		(IPCRouter as any).registerHandlers();
 	});
 
@@ -392,8 +391,7 @@ describe('IPCRouter', () => {
 
 	test('[26] should handle "credentials" event and connect bot', async () => {
 		connectBotMock.mockResolvedValue({ instanceId: 'bot-inst-1', status: 'ready' });
-		// Find the handler registered for 'credentials'
-		// ---> FIX: Add type annotation for 'call'
+		// Find the handler registered for 'credentials' using the mock captured in beforeEach
 		const handler = mockIpcServer.on.mock.calls.find(
 			(call: [string, Function]) => call[0] === 'credentials',
 		)?.[1];
@@ -426,8 +424,7 @@ describe('IPCRouter', () => {
 	});
 
 	test('[27] should handle "list:guilds" event', async () => {
-		// Find the handler registered for 'list:guilds'
-		// ---> FIX: Add type annotation for 'call'
+		// Find the handler registered for 'list:guilds' using the mock captured in beforeEach
 		const handler = mockIpcServer.on.mock.calls.find(
 			(call: [string, Function]) => call[0] === 'list:guilds',
 		)?.[1];
@@ -869,7 +866,7 @@ describe('prepareMessage Utility Function', () => {
 		expect(result.files).toHaveLength(2);
 		expect(result.files[0]).toBe('https://example.com/file.txt'); // URL passed directly
 		// ---> FIX: Expect the default generated filename based on MIME type
-		expect(result.files[1].name).toBe('file.plain');
+		expect(result.files[1].name).toBe('file.plain'); // <--- This assertion should now pass after utils.ts is fixed
 		expect(result.files[1].buffer).toBeInstanceOf(Buffer);
 	});
 
@@ -895,7 +892,3 @@ describe('prepareMessage Utility Function', () => {
 		expect(result2.content).toBe('');
 	});
 });
-
-// --- Final Check ---
-// Ensure all planned tests (1-39) are covered or noted.
-// Review mocks for completeness.

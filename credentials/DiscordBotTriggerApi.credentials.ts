@@ -1,4 +1,18 @@
-import { IAuthenticateGeneric, ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
+import {
+	IAuthenticateGeneric,
+	ICredentialTestRequest,
+	ICredentialType,
+	INodeProperties,
+} from 'n8n-workflow';
+
+// +++ Start: Added ICredentials Interface +++
+export interface ICredentials {
+	clientId: string;
+	token: string;
+	apiKey: string;
+	baseUrl: string;
+}
+// +++ End: Added ICredentials Interface +++
 
 export class DiscordBotTriggerApi implements ICredentialType {
 	name = 'discordBotTriggerApi';
@@ -46,7 +60,7 @@ export class DiscordBotTriggerApi implements ICredentialType {
 			},
 		},
 	};
-	
+
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: 'https://discord.com/api/v10/',
