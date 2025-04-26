@@ -450,12 +450,12 @@ class BotInstance {
 		if (message.author.id === this.client.user?.id) return;
 
 		// Resolve message reference if needed by any trigger node for this bot
-		let messageReference: Message | null = null;
 		let messageReferenceFetched = !message.reference; // True if no reference exists
 
 		const relevantNodes = IPCRouter.getNodesForBot(this.credentials.clientId);
 
 		for (const [nodeId, node] of relevantNodes) {
+			// ---> nodeId is the key, node is the value { parameters, socket, credentials }
 			try {
 				const parameters = node.parameters;
 				if (parameters.type !== 'message') continue;
@@ -494,7 +494,7 @@ class BotInstance {
 				// Fetch reference if needed and not already fetched
 				if (message.reference && !messageReferenceFetched) {
 					try {
-						messageReference = await message.fetchReference();
+						await message.fetchReference();
 					} catch (refError) {
 						console.warn(`Could not fetch message reference for message ${message.id}:`, refError);
 						// Decide if trigger should continue without reference? For now, we'll let it continue.
@@ -542,16 +542,34 @@ class BotInstance {
 					console.log(
 						`[Bot ${this.credentials.clientId}] Matched message ${message.id} for node ${nodeId}. Emitting via IPC.`,
 					);
-					// Emit the message data to the specific n8n node
-					IPCRouter.emitToNode(node.socket, 'messageCreate', {
-						message: message.toJSON(), // Serialize message
-						messageReference: messageReference ? messageReference.toJSON() : null, // Serialize reference
-						guild: message.guild ? message.guild.toJSON() : null, // Serialize guild
-						referenceAuthor: messageReference?.author ? messageReference.author.toJSON() : null, // Serialize author
-						author: message.author.toJSON(), // Serialize author
-						clientId: this.credentials.clientId, // Add clientId for context
-						nodeId: nodeId, // Keep nodeId for reference
-					});
+
+					// Prepare data payload with serialized objects
+					const messageData = {
+						message: message.toJSON(),
+						guild: message.guild?.toJSON(),
+						author: message.author?.toJSON(),
+						messageReference: message.reference
+							? await message
+									.fetchReference()
+									.then((ref) => ref.toJSON())
+									.catch(() => null)
+							: null,
+						referenceAuthor: message.reference
+							? await message
+									.fetchReference()
+									.then((ref) => ref.author?.toJSON())
+									.catch(() => null)
+							: null,
+					};
+
+					// ---> CORRECTED: Use 'nodeId' variable from loop, not node.nodeId <---
+					const payload = {
+						node: nodeId, // Use the loop variable 'nodeId'
+						data: messageData, // The actual message payload
+						clientId: this.credentials.clientId, // Include clientId for logging/debugging
+					};
+					console.log(`Broadcasting discordMessage event for node ${nodeId}`); // Use the loop variable 'nodeId'
+					ipc.server.broadcast('discordMessage', payload); // Broadcast the event
 				}
 			} catch (e) {
 				console.error(
@@ -877,10 +895,12 @@ class BotInstance {
 // +++ End: Added BotInstance Class +++
 
 // +++ Start: Added IPCRouter Class +++
-class IPCRouter {
+export class IPCRouter {
 	private static botManager: BotManager = new BotManager();
-	private static registeredNodes: Map<string, any> = new Map(); // Map<nodeId, { parameters: any, socket: any, credentials: ICredentials }>
+	// ---> MODIFIED: Make registeredNodes static <---
+	public static registeredNodes: Map<string, any> = new Map(); // Map<nodeId, { parameters: any, socket: any, credentials: ICredentials }>
 
+	// ---> MODIFIED: Make initialize static <---
 	static initialize() {
 		// Configure IPC server
 		ipc.config.id = 'discord-bot-server'; // Changed ID
@@ -895,15 +915,10 @@ class IPCRouter {
 				console.log(`[IPC Server] Client connected. Socket: ${socket.id ?? 'N/A'}`);
 			});
 
+			// Handle socket disconnection
 			ipc.server.on('socket.disconnected', (socket: any, destroyedSocketID: string) => {
-				console.log(`[IPC Server] Client disconnected. Socket ID: ${destroyedSocketID}`);
-				// Clean up registered nodes associated with this socket if necessary
-				for (const [nodeId, node] of this.registeredNodes.entries()) {
-					if (node.socket === socket || !ipc.server.sockets.includes(node.socket)) {
-						console.log(`[IPC Server] Removing node ${nodeId} due to socket disconnection.`);
-						this.registeredNodes.delete(nodeId);
-					}
-				}
+				console.log(`IPC Client disconnected: ${destroyedSocketID}`);
+				this.unregisterNodeForSocket(socket); // Keep static reference here for internal use
 			});
 
 			ipc.server.on('error', (error: any) => {
@@ -911,7 +926,7 @@ class IPCRouter {
 			});
 			// ---> END ADDED <---
 
-			this.registerHandlers();
+			this.registerHandlers(); // Keep static reference here for internal use
 		});
 
 		// ---> ADDED LOG <---
@@ -1232,6 +1247,28 @@ class IPCRouter {
 			this.emitToNode(node.socket, event, emitData);
 		}
 	}
+
+	// Unregister nodes associated with a disconnected socket
+	private static unregisterNodeForSocket(socket: any) {
+		const nodesToRemove: string[] = [];
+		this.registeredNodes.forEach((node, nodeId) => {
+			// ---> FIXED: Reverted to ipc.server.sockets <---
+			// Check if the node's socket is the one that disconnected OR if it's no longer in the active connections list
+			// @ts-ignore - Type definitions for node-ipc might be incorrect; .sockets is commonly used.
+			if (node.socket === socket || !ipc.server.sockets.includes(node.socket)) {
+				nodesToRemove.push(nodeId);
+			}
+		});
+
+		nodesToRemove.forEach((nodeId) => {
+			this.unregisterTriggerNode(nodeId);
+		});
+	}
+
+	private static unregisterTriggerNode(nodeId: string) {
+		console.log(`[IPC Router] Unregistering trigger node: ${nodeId}`); // Added prefix
+		this.registeredNodes.delete(nodeId);
+	}
 }
 // +++ End: Added IPCRouter Class +++
 
@@ -1435,6 +1472,7 @@ function prepareMessage(nodeParameters: any): any {
 // --- Main Execution ---
 export default function () {
 	// Initialize the IPC Router which sets up the server and handlers
+	// ---> MODIFIED: Call initialize statically <---
 	IPCRouter.initialize();
 
 	console.log('Discord Bot Process Started with Multi-Credential Support');
