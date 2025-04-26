@@ -428,6 +428,7 @@ describe('IPCRouter', () => {
 	});
 
 	test('[27] should handle "list:guilds" event', async () => {
+		// Find the handler registered for 'list:guilds'
 		// ---> FIX: Add type annotation for 'call'
 		const handler = mockIpcServer.on.mock.calls.find(
 			(call: [string, Function]) => call[0] === 'list:guilds',
@@ -435,29 +436,43 @@ describe('IPCRouter', () => {
 		expect(handler).toBeDefined();
 		if (!handler) return;
 
+		// Simulate receiving the event
 		await handler({ credentials: mockCredentials }, mockSocket);
 
 		expect(getBotByCredentialsMock).toHaveBeenCalledWith(mockCredentials);
-		expect(fetchGuildsMock).toHaveBeenCalledWith(true); // Force refresh
+		// ---> UPDATED: Expect fetchGuilds to be called with false (no forced refresh) <---
+		expect(fetchGuildsMock).toHaveBeenCalledWith(false);
 		expect(mockIpcServer.emit).toHaveBeenCalledWith(mockSocket, 'list:guilds', [
 			{ name: 'Guild 1', value: 'g1' },
 		]);
 	});
 
 	test('[27b] should handle "list:guilds" when bot not ready', async () => {
-		isReadyMock.mockReturnValue(false);
-		// ---> FIX: Add type annotation for 'call'
-		const handler = mockIpcServer.on.mock.calls.find(
+		const listGuildsHandler = mockIpcServer.on.mock.calls.find(
 			(call: [string, Function]) => call[0] === 'list:guilds',
 		)?.[1];
-		expect(handler).toBeDefined();
-		if (!handler) return;
+		expect(listGuildsHandler).toBeDefined();
+		if (!listGuildsHandler) return;
 
-		await handler({ credentials: mockCredentials }, mockSocket);
+		// Setup: Bot instance exists but is not ready
+		const mockBotInstanceNotReady = {
+			isReady: jest.fn().mockReturnValue(false),
+			fetchGuilds: jest.fn(),
+		};
+		getBotByCredentialsMock.mockReturnValue(mockBotInstanceNotReady as any);
+		const fetchGuildsMock = mockBotInstanceNotReady.fetchGuilds;
 
+		// Simulate receiving the event
+		// ---> FIX: Use the correct variable name 'listGuildsHandler' <---
+		await listGuildsHandler({ credentials: mockCredentials }, mockSocket);
+
+		// Assertions
 		expect(getBotByCredentialsMock).toHaveBeenCalledWith(mockCredentials);
 		expect(fetchGuildsMock).not.toHaveBeenCalled();
-		expect(mockIpcServer.emit).toHaveBeenCalledWith(mockSocket, 'list:guilds', []);
+		// ---> UPDATED: Expect error object instead of empty array <---
+		expect(mockIpcServer.emit).toHaveBeenCalledWith(mockSocket, 'list:guilds', {
+			error: 'Bot bot-1 not found or not ready.',
+		});
 	});
 
 	test('[27c] should handle "list:channels" event', async () => {
@@ -518,27 +533,23 @@ describe('IPCRouter', () => {
 		expect(connectBotMock).toHaveBeenCalledWith(mockCredentials); // Ensure bot connection is triggered
 	});
 
-	test('[29] should handle "triggerNodeRemoved" event', () => {
-		// First register a node
-		const nodeData = { nodeId: 'node-to-remove', credentials: mockCredentials, parameters: {} };
-		// ---> FIX: Add type annotation for 'call'
-		const registerHandler = mockIpcServer.on.mock.calls.find(
-			(call: [string, Function]) => call[0] === 'triggerNodeRegistered',
+	test('[29] should handle "triggerNodeUnregistered" event', () => {
+		// Find the handler for the renamed event
+		const unregisterHandler = mockIpcServer.on.mock.calls.find(
+			// ---> FIX: Look for 'triggerNodeUnregistered' <---
+			(call: [string, Function]) => call[0] === 'triggerNodeUnregistered',
 		)?.[1];
-		expect(registerHandler).toBeDefined();
-		if (!registerHandler) return;
-		registerHandler(nodeData, mockSocket);
+		expect(unregisterHandler).toBeDefined();
+		if (!unregisterHandler) return;
+
+		// Setup: Register a node first
+		IPCRouter.registeredNodes.set('node-to-remove', { socket: mockSocket });
 		expect(IPCRouter.registeredNodes.has('node-to-remove')).toBe(true);
 
-		// Now remove it
-		// ---> FIX: Add type annotation for 'call'
-		const removeHandler = mockIpcServer.on.mock.calls.find(
-			(call: [string, Function]) => call[0] === 'triggerNodeRemoved',
-		)?.[1];
-		expect(removeHandler).toBeDefined();
-		if (!removeHandler) return;
-		removeHandler({ nodeId: 'node-to-remove' }, mockSocket);
+		// Simulate receiving the event
+		unregisterHandler({ nodeId: 'node-to-remove' }, mockSocket);
 
+		// Assertion: Node should be removed
 		expect(IPCRouter.registeredNodes.has('node-to-remove')).toBe(false);
 	});
 
@@ -566,23 +577,22 @@ describe('IPCRouter', () => {
 	});
 
 	test('[30b] should handle "send:action" event', async () => {
-		// ---> FIX: Add missing properties to satisfy IDiscordNodeActionParameters
+		// ---> FIX: Ensure roleUpdateIds is correctly defined <---
 		const actionData: { credentials: ICredentials } & IDiscordNodeActionParameters = {
 			credentials: mockCredentials,
 			actionType: 'addRole',
 			guildId: 'g1',
 			userId: 'u1',
-			roleUpdateIds: ['r1'],
+			roleUpdateIds: ['r1'], // Ensure no extra commas inside the array
 			// Add missing required properties with dummy values
 			executionId: 'exec-123',
 			triggerPlaceholder: false,
 			triggerChannel: false,
-			channelId: 'chan-dummy', // Required even if not used by addRole
+			channelId: 'chan-dummy',
 			apiKey: 'key-dummy',
 			baseUrl: 'url-dummy',
-			removeMessagesNumber: 0, // Required even if not used by addRole
+			removeMessagesNumber: 0,
 		};
-		// ---> FIX: Add type annotation for 'call'
 		const handler = mockIpcServer.on.mock.calls.find(
 			(call: [string, Function]) => call[0] === 'send:action',
 		)?.[1];
@@ -592,22 +602,8 @@ describe('IPCRouter', () => {
 		await handler(actionData, mockSocket);
 
 		expect(getBotByCredentialsMock).toHaveBeenCalledWith(mockCredentials);
-		// Check that credentials are NOT passed to performAction
-		expect(performActionMock).toHaveBeenCalledWith({
-			actionType: 'addRole',
-			guildId: 'g1',
-			userId: 'u1',
-			roleUpdateIds: ['r1'],
-			// Ensure the added dummy properties are also passed if needed by the actual implementation
-			// (though performAction likely ignores them for addRole)
-			executionId: 'exec-123',
-			triggerPlaceholder: false,
-			triggerChannel: false,
-			channelId: 'chan-dummy',
-			apiKey: 'key-dummy',
-			baseUrl: 'url-dummy',
-			removeMessagesNumber: 0,
-		});
+		// Expect the full actionData object, including credentials
+		expect(performActionMock).toHaveBeenCalledWith(actionData);
 		expect(mockIpcServer.emit).toHaveBeenCalledWith(mockSocket, 'callback:send:action', {
 			success: true,
 		});

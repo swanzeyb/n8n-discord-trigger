@@ -988,23 +988,27 @@ export class IPCRouter {
 		ipc.server.on('list:guilds', async (data: { credentials: ICredentials }, socket: any) => {
 			if (!data || !data.credentials) {
 				console.error('list:guilds request missing credentials.');
-				return this.emitToNode(socket, 'list:guilds', []);
+				// ---> Return error object for consistency <---
+				return this.emitToNode(socket, 'list:guilds', { error: 'Missing credentials' });
 			}
 			try {
 				const botInstance = this.botManager.getBotByCredentials(data.credentials);
+				// ---> Check if bot instance exists AND is ready <---
 				if (!botInstance || !botInstance.isReady()) {
-					console.warn(
-						`list:guilds requested but bot ${data.credentials.clientId} not found or not ready.`,
-					);
-					this.emitToNode(socket, 'list:guilds', []);
+					const errorMsg = `Bot ${data.credentials.clientId} not found or not ready.`;
+					console.warn(`list:guilds requested: ${errorMsg}`);
+					// ---> Return error object <---
+					this.emitToNode(socket, 'list:guilds', { error: errorMsg });
 					return;
 				}
-				// Force refresh on list request for UI freshness
-				const guilds = await botInstance.fetchGuilds(true);
+				// ---> Fetch guilds (consider forceRefresh=false unless needed) <---
+				const guilds = await botInstance.fetchGuilds(false);
 				this.emitToNode(socket, 'list:guilds', guilds);
-			} catch (error) {
-				console.error(`Error listing guilds for bot ${data.credentials.clientId}:`, error);
-				this.emitToNode(socket, 'list:guilds', []);
+			} catch (error: any) {
+				const errorMsg = `Error fetching guilds for ${data.credentials.clientId}: ${error.message}`;
+				console.error(errorMsg);
+				// ---> Return error object <---
+				this.emitToNode(socket, 'list:guilds', { error: errorMsg });
 			}
 		});
 
@@ -1014,23 +1018,26 @@ export class IPCRouter {
 			async (data: { credentials: ICredentials; guildIds: string[] }, socket: any) => {
 				if (!data || !data.credentials || !data.guildIds) {
 					console.error('list:channels request missing credentials or guildIds.');
-					return this.emitToNode(socket, 'list:channels', []);
+					// ---> Return error object <---
+					return this.emitToNode(socket, 'list:channels', { error: 'Missing credentials or guildIds' });
 				}
 				try {
 					const botInstance = this.botManager.getBotByCredentials(data.credentials);
+					// ---> Check if bot instance exists AND is ready <---
 					if (!botInstance || !botInstance.isReady()) {
-						console.warn(
-							`list:channels requested but bot ${data.credentials.clientId} not found or not ready.`,
-						);
-						this.emitToNode(socket, 'list:channels', []);
+						const errorMsg = `Bot ${data.credentials.clientId} not found or not ready.`;
+						console.warn(`list:channels requested: ${errorMsg}`);
+						// ---> Return error object <---
+						this.emitToNode(socket, 'list:channels', { error: errorMsg });
 						return;
 					}
-					// Force refresh on list request
 					const channels = await botInstance.fetchChannels(data.guildIds);
 					this.emitToNode(socket, 'list:channels', channels);
-				} catch (error) {
-					console.error(`Error listing channels for bot ${data.credentials.clientId}:`, error);
-					this.emitToNode(socket, 'list:channels', []);
+				} catch (error: any) {
+					const errorMsg = `Error fetching channels for ${data.credentials.clientId}: ${error.message}`;
+					console.error(errorMsg);
+					// ---> Return error object <---
+					this.emitToNode(socket, 'list:channels', { error: errorMsg });
 				}
 			},
 		);
@@ -1041,23 +1048,26 @@ export class IPCRouter {
 			async (data: { credentials: ICredentials; guildIds: string[] }, socket: any) => {
 				if (!data || !data.credentials || !data.guildIds) {
 					console.error('list:roles request missing credentials or guildIds.');
-					return this.emitToNode(socket, 'list:roles', []);
+					// ---> Return error object <---
+					return this.emitToNode(socket, 'list:roles', { error: 'Missing credentials or guildIds' });
 				}
 				try {
 					const botInstance = this.botManager.getBotByCredentials(data.credentials);
+					// ---> Check if bot instance exists AND is ready <---
 					if (!botInstance || !botInstance.isReady()) {
-						console.warn(
-							`list:roles requested but bot ${data.credentials.clientId} not found or not ready.`,
-						);
-						this.emitToNode(socket, 'list:roles', []);
+						const errorMsg = `Bot ${data.credentials.clientId} not found or not ready.`;
+						console.warn(`list:roles requested: ${errorMsg}`);
+						// ---> Return error object <---
+						this.emitToNode(socket, 'list:roles', { error: errorMsg });
 						return;
 					}
-					// Force refresh on list request
 					const roles = await botInstance.fetchRoles(data.guildIds);
 					this.emitToNode(socket, 'list:roles', roles);
-				} catch (error) {
-					console.error(`Error listing roles for bot ${data.credentials.clientId}:`, error);
-					this.emitToNode(socket, 'list:roles', []);
+				} catch (error: any) {
+					const errorMsg = `Error fetching roles for ${data.credentials.clientId}: ${error.message}`;
+					console.error(errorMsg);
+					// ---> Return error object <---
+					this.emitToNode(socket, 'list:roles', { error: errorMsg });
 				}
 			},
 		);
@@ -1088,17 +1098,24 @@ export class IPCRouter {
 			});
 		});
 
-		// Remove trigger node
-		ipc.server.on('triggerNodeRemoved', (data: { nodeId: string }, socket: any) => {
-			if (!data || !data.nodeId) {
-				console.error('[IPC Router] triggerNodeRemoved event missing nodeId.'); // Added prefix
-				return;
+		// Remove trigger node - Renamed event for clarity
+		// ---> RENAMED from triggerNodeRemoved to triggerNodeUnregistered <---
+		ipc.server.on('triggerNodeUnregistered', (data: { nodeId: string }, socket: any) => {
+			if (data && data.nodeId) {
+				// ---> Check if the socket matches the one stored for the node (security/sanity check) <---
+				const node = this.registeredNodes.get(data.nodeId);
+				if (node && node.socket === socket) {
+					this.unregisterTriggerNode(data.nodeId);
+				} else if (node) {
+					console.warn(`[IPC Router] Received unregister for node ${data.nodeId} from non-matching socket.`);
+				} else {
+					console.log(`[IPC Router] Received unregister for already unknown node: ${data.nodeId}`);
+				}
+			} else {
+				console.warn('[IPC Router] Received malformed triggerNodeUnregistered event.');
 			}
-			console.log(`[IPC Router] Removing trigger node: ${data.nodeId}`); // Added prefix
-			this.registeredNodes.delete(data.nodeId);
-			// Optional: Check if any bots can be disconnected if no nodes are using them anymore
-			// this.cleanupUnusedBots();
 		});
+
 
 		// Handle message sending
 		ipc.server.on(
@@ -1258,22 +1275,30 @@ export class IPCRouter {
 	private static unregisterNodeForSocket(socket: any) {
 		const nodesToRemove: string[] = [];
 		this.registeredNodes.forEach((node, nodeId) => {
-			// ---> FIXED: Reverted to ipc.server.sockets <---
-			// Check if the node's socket is the one that disconnected OR if it's no longer in the active connections list
-			// @ts-ignore - Type definitions for node-ipc might be incorrect; .sockets is commonly used.
-			if (node.socket === socket || !ipc.server.sockets.includes(node.socket)) {
+			// ---> Use strict equality check <---
+			if (node.socket === socket) {
 				nodesToRemove.push(nodeId);
 			}
 		});
 
 		nodesToRemove.forEach((nodeId) => {
+			// ---> Call the unified unregister function <---
 			this.unregisterTriggerNode(nodeId);
 		});
 	}
 
+	// ---> Unified unregistration logic <---
 	private static unregisterTriggerNode(nodeId: string) {
-		console.log(`[IPC Router] Unregistering trigger node: ${nodeId}`); // Added prefix
-		this.registeredNodes.delete(nodeId);
+		console.log(`[IPC Router] Unregistering trigger node: ${nodeId}`);
+		// ---> Check if node exists before deleting <---
+		if (this.registeredNodes.has(nodeId)) {
+			this.registeredNodes.delete(nodeId);
+			console.log(`[IPC Router] Node ${nodeId} unregistered successfully.`);
+		} else {
+			console.log(`[IPC Router] Attempted to unregister node ${nodeId}, but it was not found.`);
+		}
+		// Optional: Check if any bot instances are now unused and can be disconnected
+		// this.cleanupUnusedBots(); // Implement this if needed
 	}
 }
 // +++ End: Added IPCRouter Class +++

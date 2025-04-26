@@ -67,12 +67,6 @@ export const getChannels = async (
 		return [{ name: 'Credentials Not Found!', value: 'false' }]; // Changed casing
 	}
 
-	// Check connection status first
-	const res = await connection(credentials).catch((e) => e);
-	if (!['ready', 'already'].includes(res)) {
-		return [{ name: res + endMessage, value: 'false' }];
-	}
-
 	const channelsRequest = (): Promise<{ name: string; value: string }[] | string> => // Allow string for error messages
 		new Promise((resolve) => {
 			const timeout = setTimeout(() => resolve('Request timed out'), 15000);
@@ -86,18 +80,37 @@ export const getChannels = async (
 					return;
 				}
 				// Include credentials and guildIds
+				// ---> The handler for 'list:channels' in bot.ts will check bot readiness <---
 				server.emit('list:channels', { credentials, guildIds });
 
-				server.on('list:channels', (data: { name: string; value: string }[]) => {
+				// ---> Use 'once' for the response listener to avoid manual cleanup <---
+				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
+				server.once('list:channels', (data: { name: string; value: string }[] | { error: string }) => {
 					clearTimeout(timeout);
-					resolve(data);
+					// ---> Check for explicit error from bot process <---
+					if (data && typeof data === 'object' && 'error' in data) {
+						resolve(data.error); // Resolve with the error message string
+					} else if (Array.isArray(data)) {
+						resolve(data); // Resolve with the channel list
+					} else {
+						resolve('Invalid response from bot process'); // Handle unexpected response
+					}
 				});
 
-				server.on('error', (err) => {
+				// ---> Use 'once' for the error listener during this specific request <---
+				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
+				server.once('error', (err: any) => { // ---> Added type any
 					clearTimeout(timeout);
 					console.error('IPC Error during list:channels:', err);
 					resolve('IPC error');
+					// Disconnect after error? Depends on desired retry behavior.
+					// ipc.disconnect('bot');
 				});
+
+				// ---> Consider disconnecting after the request is fulfilled or errors out? <---
+				// This might make IPC connections more ephemeral if desired.
+				// server.once('list:channels', () => ipc.disconnect('bot'));
+				// server.once('error', () => ipc.disconnect('bot'));
 			});
 		});
 
@@ -111,8 +124,9 @@ export const getChannels = async (
 	if (Array.isArray(channels) && channels.length) {
 		return channels;
 	} else {
+		// ---> Refined message for empty array or permission issues <---
 		const message =
-			'No text channels found in the selected server(s) or bot lacks permissions.' + endMessage;
+			'No text channels found in the selected server(s), bot lacks permissions, or bot is not ready.' + endMessage;
 		return [{ name: message, value: 'false' }];
 	}
 };
@@ -132,13 +146,6 @@ export const getGuilds = async (that: any): Promise<INodePropertyOptions[]> => {
 		return [{ name: 'Credentials Not Found!', value: 'false' }]; // Changed casing
 	}
 
-	// Check connection status first
-	const res = await connection(credentials).catch((e) => e);
-	// Allow 'already' status as valid
-	if (!['ready', 'already'].includes(res)) {
-		return [{ name: res + endMessage, value: 'false' }];
-	}
-
 	const guildsRequest = (): Promise<{ name: string; value: string }[] | string> => // Allow string for error messages
 		new Promise((resolve) => {
 			const timeout = setTimeout(() => resolve('Request timed out'), 15000);
@@ -152,18 +159,34 @@ export const getGuilds = async (that: any): Promise<INodePropertyOptions[]> => {
 					return;
 				}
 				// Include credentials for context
+				// ---> The handler for 'list:guilds' in bot.ts will check bot readiness <---
 				server.emit('list:guilds', { credentials });
 
-				server.on('list:guilds', (data: { name: string; value: string }[]) => {
+				// ---> Use 'once' for the response listener <---
+				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
+				server.once('list:guilds', (data: { name: string; value: string }[] | { error: string }) => {
 					clearTimeout(timeout);
-					resolve(data);
+					// ---> Check for explicit error from bot process <---
+					if (data && typeof data === 'object' && 'error' in data) {
+						resolve(data.error); // Resolve with the error message string
+					} else if (Array.isArray(data)) {
+						resolve(data); // Resolve with the guild list
+					} else {
+						resolve('Invalid response from bot process'); // Handle unexpected response
+					}
 				});
 
-				server.on('error', (err) => {
+				// ---> Use 'once' for the error listener <---
+				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
+				server.once('error', (err: any) => { // ---> Added type any
 					clearTimeout(timeout);
 					console.error('IPC Error during list:guilds:', err);
 					resolve('IPC error');
+					// ipc.disconnect('bot');
 				});
+
+				// server.once('list:guilds', () => ipc.disconnect('bot'));
+				// server.once('error', () => ipc.disconnect('bot'));
 			});
 		});
 
@@ -177,8 +200,9 @@ export const getGuilds = async (that: any): Promise<INodePropertyOptions[]> => {
 	if (Array.isArray(guilds) && guilds.length) {
 		return guilds;
 	} else {
+		// ---> Refined message <---
 		const message =
-			'Your bot is not part of any guilds or failed to fetch them. Please add the bot to at least one guild.' +
+			'Bot is not in any guilds, failed to fetch them, or bot is not ready.' +
 			endMessage;
 		return [{ name: message, value: 'false' }];
 	}
@@ -207,12 +231,6 @@ export const getRoles = async (
 		return [{ name: 'Credentials Not Found!', value: 'false' }]; // Changed casing
 	}
 
-	// Check connection status first
-	const res = await connection(credentials).catch((e) => e);
-	if (!['ready', 'already'].includes(res)) {
-		return [{ name: res + endMessage, value: 'false' }];
-	}
-
 	const rolesRequest = (): Promise<{ name: string; value: string }[] | string> => // Allow string for error messages
 		new Promise((resolve) => {
 			const timeout = setTimeout(() => resolve('Request timed out'), 15000);
@@ -226,19 +244,34 @@ export const getRoles = async (
 					return;
 				}
 				// Include credentials and guildIds
+				// ---> The handler for 'list:roles' in bot.ts will check bot readiness <---
 				server.emit('list:roles', { credentials, guildIds: selectedGuildIds });
 
-				server.on('list:roles', (data: any) => {
-					// data can be array or potentially error indicator
+				// ---> Use 'once' for the response listener <---
+				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
+				server.once('list:roles', (data: { name: string; value: string }[] | { error: string }) => {
 					clearTimeout(timeout);
-					resolve(data);
+					// ---> Check for explicit error from bot process <---
+					if (data && typeof data === 'object' && 'error' in data) {
+						resolve(data.error); // Resolve with the error message string
+					} else if (Array.isArray(data)) {
+						resolve(data); // Resolve with the role list
+					} else {
+						resolve('Invalid response from bot process'); // Handle unexpected response
+					}
 				});
 
-				server.on('error', (err) => {
+				// ---> Use 'once' for the error listener <---
+				// @ts-ignore - Suppress incorrect TS error for node-ipc 'once' method
+				server.once('error', (err: any) => { // ---> Added type any
 					clearTimeout(timeout);
 					console.error('IPC Error during list:roles:', err);
 					resolve('IPC error');
+					// ipc.disconnect('bot');
 				});
+
+				// server.once('list:roles', () => ipc.disconnect('bot'));
+				// server.once('error', () => ipc.disconnect('bot'));
 			});
 		});
 
@@ -254,14 +287,16 @@ export const getRoles = async (
 		const filtered = roles.filter((r: any) => r.name !== '@everyone');
 		if (filtered.length) return filtered;
 		else {
+			// ---> Refined message <---
 			const message =
-				'No roles found (excluding @everyone) in the selected server(s) or bot lacks permissions.' +
+				'No roles found (excluding @everyone) in the selected server(s), bot lacks permissions, or bot is not ready.' +
 				endMessage;
 			return [{ name: message, value: 'false' }];
 		}
 	} else {
 		// Handle cases where roles might not be an array (e.g., empty response, error indicator)
-		const message = 'Unexpected response or error fetching roles.' + endMessage;
+		// ---> Refined message <---
+		const message = 'Unexpected response, error fetching roles, or bot is not ready.' + endMessage;
 		return [{ name: message, value: 'false' }];
 	}
 };
@@ -304,7 +339,7 @@ export const ipcRequest = (
 			server.once(callbackEvent, listener); // Use once to auto-remove listener after response
 
 			// Handle IPC errors during the request
-			server.on('error', (err) => {
+			server.on('error', (err: any) => {
 				clearTimeout(timeout);
 				console.error(`IPC Error during ${type} request:`, err);
 				reject(new Error('IPC error during request'));

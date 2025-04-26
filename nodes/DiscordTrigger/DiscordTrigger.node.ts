@@ -203,14 +203,20 @@ export class DiscordTrigger implements INodeType {
 					closeFunction: async () => {
 						console.log(`[Node ${nodeId}] Closing trigger. Disconnecting from IPC.`);
 						if (ipcConnected) {
-							if (ipc.of['bot']) {
-								ipc.of['bot'].emit('triggerNodeUnregistered', { nodeId });
+							const serverRef = ipc.of['bot']; // ---> Get reference before check
+							if (serverRef) {
+								// ---> Use RENAMED event 'triggerNodeUnregistered' <---
+								serverRef.emit('triggerNodeUnregistered', { nodeId });
+								console.log(`[Node ${nodeId}] Emitted triggerNodeUnregistered.`); // ---> Added log
 								ipc.disconnect('bot');
+								console.log(`[Node ${nodeId}] Called ipc.disconnect('bot').`); // ---> Added log
 							} else {
-								console.warn(`[Node ${nodeId}] IPC server reference not found during close.`);
+								console.warn(`[Node ${nodeId}] IPC server reference 'bot' not found during close.`);
 							}
-							ipcConnected = false;
-							console.log(`[Node ${nodeId}] Disconnected from IPC server.`);
+							ipcConnected = false; // ---> Set ipcConnected to false after attempting disconnect
+							// console.log(`[Node ${nodeId}] Disconnected from IPC server.`); // ---> Redundant log? ipc.disconnect is async
+						} else {
+							console.log(`[Node ${nodeId}] Already disconnected from IPC, skipping unregister emit.`); // ---> Added log
 						}
 					},
 				});
