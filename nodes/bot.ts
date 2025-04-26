@@ -212,52 +212,84 @@ class BotInstance {
 	}
 
 	async connect(): Promise<boolean> {
-		if (this.state.ready || this.state.login) {
-			console.log(`Bot ${this.credentials.clientId} is already connected or connecting.`);
-			return this.state.ready;
+		if (this.state.ready) {
+			console.log(`Bot ${this.credentials.clientId} is already connected.`);
+			return true;
 		}
+		if (this.state.login) {
+			console.log(`Bot ${this.credentials.clientId} is already connecting.`);
+			// Wait for the existing login attempt to complete or fail
+			// Fall through to the waiting logic below
+		}
+
 		try {
-			this.state.login = true;
-			this.state.error = null; // Clear previous errors on new attempt
-			await this.client.login(this.credentials.token);
-			// 'ready' event will set state.ready = true
-			// No need to set rest token here, login handles it.
-			// this.client.rest.setToken(this.credentials.token); // Redundant
-			// Wait for the 'ready' event to fire, with a timeout
-			await new Promise<void>((resolve, reject) => {
-				const timeout = setTimeout(() => {
-					this.state.login = false;
-					this.state.error = 'Connection timed out waiting for ready event.';
-					console.error(this.state.error);
-					reject(new Error(this.state.error));
-				}, 30000); // 30 second timeout for ready event
+			// Only start login if not already in progress
+			if (!this.state.login) {
+				this.state.login = true;
+				this.state.error = null; // Clear previous errors
 
-				this.client.once('ready', () => {
-					clearTimeout(timeout);
-					resolve();
-				});
-
-				this.client.once('error', (err) => {
-					// Handle immediate errors during login
-					clearTimeout(timeout);
+				// Start login, but don't await the internal ready event here
+				this.client.login(this.credentials.token).catch((loginError) => {
+					// Catch immediate login errors (e.g., invalid token)
+					// The 'error' event handler might also catch this
+					if (!this.state.error) {
+						// Avoid overwriting more specific errors
+						this.state.error = loginError.message || 'Unknown login error during initiation';
+					}
 					this.state.login = false;
-					this.state.error = err.message;
-					console.error(`Immediate login error for bot ${this.credentials.clientId}:`, err);
-					reject(err);
+					console.error(
+						`Immediate login initiation error for bot ${this.credentials.clientId}:`,
+						this.state.error,
+					);
+					// The waiting promise below will handle the error state
 				});
-			});
-			return true; // Connection successful if 'ready' fired
-		} catch (error: any) {
-			// Error handled by promise rejection or client 'error' event handler
-			if (!this.state.error) {
-				// Ensure error state is set if not already
-				this.state.error = error.message || 'Unknown login error';
 			}
-			this.state.login = false;
+
+			// Wait for the state to change (ready or error) due to event handlers
+			await new Promise<void>((resolve, reject) => {
+				const timeoutDuration = 30000; // 30 seconds timeout
+				const checkInterval = 100; // Check every 100ms
+				const startTime = Date.now();
+
+				const intervalId = setInterval(() => {
+					if (this.state.ready) {
+						clearInterval(intervalId);
+						resolve();
+					} else if (this.state.error) {
+						clearInterval(intervalId);
+						reject(new Error(this.state.error));
+					} else if (Date.now() - startTime > timeoutDuration) {
+						clearInterval(intervalId);
+						// Only set timeout error if no other error occurred
+						if (!this.state.error) {
+							this.state.error = 'Connection timed out waiting for ready state.';
+							console.error(this.state.error);
+						}
+						this.state.login = false; // Ensure login state is cleared on timeout
+						reject(new Error(this.state.error || 'Connection timed out'));
+					}
+					// Continue checking if still logging in and no error/ready state yet
+				}, checkInterval);
+			});
+
+			// If the promise resolved, it means state.ready became true
+			return true;
+		} catch (error: any) {
+			// This catch block now primarily handles the rejection from the waiting promise
+			// The error state should already be set by the interval or event handlers
+			if (!this.state.error) {
+				// Fallback error message if state.error wasn't set somehow
+				this.state.error = error.message || 'Unknown connection error';
+			}
+			this.state.login = false; // Ensure login state is false on error
 			console.error(`Failed to connect bot ${this.credentials.clientId}:`, this.state.error);
+
 			// Attempt to destroy client if login failed badly
 			try {
-				this.client.destroy();
+				// Check if client exists and has a destroy method before calling
+				if (this.client && typeof this.client.destroy === 'function') {
+					this.client.destroy();
+				}
 			} catch (destroyError) {
 				console.error(
 					`Error destroying client after failed connection for ${this.credentials.clientId}:`,
@@ -409,6 +441,10 @@ class BotInstance {
 	// --- Event Handlers ---
 	private async handleMessageCreate(message: Message) {
 		if (!this.state.ready) return; // Ignore if not ready
+		// Added log
+		console.log(
+			`[Bot ${this.credentials.clientId}] Received messageCreate event: ${message.id} from ${message.author.tag} in channel ${message.channel.id}`,
+		);
 
 		// Basic check to ignore self (shouldn't happen with correct intent logic but good practice)
 		if (message.author.id === this.client.user?.id) return;
@@ -496,12 +532,16 @@ class BotInstance {
 						const reg = new RegExp(regStr, parameters.caseSensitive ? '' : 'i');
 						match = reg.test(message.content);
 					} catch (regexError) {
-						console.error(`Invalid regex pattern "${regStr}" for node ${nodeId}:`, regexError);
-						continue; // Skip this trigger if regex is invalid
+						console.error(`Invalid regex pattern \"${regStr}\" for node ${nodeId}:`, regexError);
+						continue;
 					}
 				}
 
 				if (match) {
+					// Added log before emitting
+					console.log(
+						`[Bot ${this.credentials.clientId}] Matched message ${message.id} for node ${nodeId}. Emitting via IPC.`,
+					);
 					// Emit the message data to the specific n8n node
 					IPCRouter.emitToNode(node.socket, 'messageCreate', {
 						message: message.toJSON(), // Serialize message
@@ -530,6 +570,10 @@ class BotInstance {
 			user: guildMember.user.toJSON(), // Serialize
 			clientId: this.credentials.clientId,
 		};
+		// Added log
+		console.log(
+			`[Bot ${this.credentials.clientId}] Received guildMemberAdd event for user ${guildMember.user.tag} in guild ${guildMember.guild.id}. Emitting via IPC.`,
+		);
 		IPCRouter.emitToRegisteredNodes('guildMemberAdd', eventData, 'user-join', guildMember.guild.id);
 	}
 
@@ -550,6 +594,10 @@ class BotInstance {
 			user: user.toJSON(), // Serialize
 			clientId: this.credentials.clientId,
 		};
+		// Added log
+		console.log(
+			`[Bot ${this.credentials.clientId}] Received guildMemberRemove event for user ${user.tag} in guild ${guild.id}. Emitting via IPC.`,
+		);
 		IPCRouter.emitToRegisteredNodes('guildMemberRemove', eventData, 'user-leave', guild.id);
 	}
 
@@ -560,6 +608,10 @@ class BotInstance {
 			guild: role.guild.toJSON(), // Serialize
 			clientId: this.credentials.clientId,
 		};
+		// Added log
+		console.log(
+			`[Bot ${this.credentials.clientId}] Received roleCreate event for role ${role.name} in guild ${role.guild.id}. Emitting via IPC.`,
+		);
 		IPCRouter.emitToRegisteredNodes('roleCreate', eventData, 'role-create', role.guild.id);
 	}
 
@@ -570,6 +622,10 @@ class BotInstance {
 			guild: role.guild.toJSON(), // Serialize
 			clientId: this.credentials.clientId,
 		};
+		// Added log
+		console.log(
+			`[Bot ${this.credentials.clientId}] Received roleDelete event for role ${role.name} in guild ${role.guild.id}. Emitting via IPC.`,
+		);
 		IPCRouter.emitToRegisteredNodes('roleDelete', eventData, 'role-delete', role.guild.id);
 	}
 
@@ -594,6 +650,10 @@ class BotInstance {
 			guild: newRole.guild.toJSON(), // Serialize
 			clientId: this.credentials.clientId,
 		};
+		// Added log
+		console.log(
+			`[Bot ${this.credentials.clientId}] Received roleUpdate event for role ${newRole.name} in guild ${newRole.guild.id}. Emitting via IPC.`,
+		);
 		IPCRouter.emitToRegisteredNodes('roleUpdate', eventData, 'role-update', newRole.guild.id);
 	}
 
@@ -825,14 +885,39 @@ class IPCRouter {
 		// Configure IPC server
 		ipc.config.id = 'discord-bot-server'; // Changed ID
 		ipc.config.retry = 1500;
-		ipc.config.silent = true;
+		ipc.config.silent = false; // Make IPC less silent for debugging
 
 		ipc.serve(() => {
 			console.log('IPC server started (discord-bot-server)');
+
+			// ---> ADDED: Server-side event listeners <---
+			ipc.server.on('connect', (socket: any) => {
+				console.log(`[IPC Server] Client connected. Socket: ${socket.id ?? 'N/A'}`);
+			});
+
+			ipc.server.on('socket.disconnected', (socket: any, destroyedSocketID: string) => {
+				console.log(`[IPC Server] Client disconnected. Socket ID: ${destroyedSocketID}`);
+				// Clean up registered nodes associated with this socket if necessary
+				for (const [nodeId, node] of this.registeredNodes.entries()) {
+					if (node.socket === socket || !ipc.server.sockets.includes(node.socket)) {
+						console.log(`[IPC Server] Removing node ${nodeId} due to socket disconnection.`);
+						this.registeredNodes.delete(nodeId);
+					}
+				}
+			});
+
+			ipc.server.on('error', (error: any) => {
+				console.error('[IPC Server] Error:', error);
+			});
+			// ---> END ADDED <---
+
 			this.registerHandlers();
 		});
 
+		// ---> ADDED LOG <---
+		console.log('[IPC Router] Attempting to start IPC server...');
 		ipc.server.start();
+		console.log('[IPC Router] IPC server start command issued.'); // Confirms start was called
 	}
 
 	// Helper to get nodes relevant to a specific bot instance
@@ -960,11 +1045,14 @@ class IPCRouter {
 		ipc.server.on('triggerNodeRegistered', (data: any, socket: any) => {
 			if (!data || !data.nodeId || !data.credentials || !data.parameters) {
 				console.error(
-					'triggerNodeRegistered event missing required data (nodeId, credentials, parameters).',
+					'[IPC Router] triggerNodeRegistered event missing required data (nodeId, credentials, parameters).', // Added prefix
 				);
 				return;
 			}
-			console.log(`Registering trigger node: ${data.nodeId} for bot ${data.credentials.clientId}`);
+			// Added detailed log
+			console.log(
+				`[IPC Router] Registering trigger node: ${data.nodeId} for bot ${data.credentials.clientId} with type ${data.parameters?.type}`,
+			);
 			this.registeredNodes.set(data.nodeId, {
 				parameters: data.parameters,
 				socket: socket,
@@ -982,10 +1070,10 @@ class IPCRouter {
 		// Remove trigger node
 		ipc.server.on('triggerNodeRemoved', (data: { nodeId: string }, socket: any) => {
 			if (!data || !data.nodeId) {
-				console.error('triggerNodeRemoved event missing nodeId.');
+				console.error('[IPC Router] triggerNodeRemoved event missing nodeId.'); // Added prefix
 				return;
 			}
-			console.log(`Removing trigger node: ${data.nodeId}`);
+			console.log(`[IPC Router] Removing trigger node: ${data.nodeId}`); // Added prefix
 			this.registeredNodes.delete(data.nodeId);
 			// Optional: Check if any bots can be disconnected if no nodes are using them anymore
 			// this.cleanupUnusedBots();
@@ -1137,6 +1225,10 @@ class IPCRouter {
 
 			// If all checks pass, emit the event to this node
 			const emitData = { ...data, nodeId }; // Add nodeId for reference
+			// Added log before emitting
+			console.log(
+				`[IPC Router] Emitting event '${event}' to node ${nodeId} (Trigger Type: ${triggerType ?? 'N/A'}, Guild Filter: ${guildId ?? 'N/A'})`,
+			);
 			this.emitToNode(node.socket, event, emitData);
 		}
 	}

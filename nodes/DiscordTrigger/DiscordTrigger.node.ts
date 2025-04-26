@@ -1,11 +1,11 @@
 import {
+	NodeOperationError,
+	NodeConnectionType,
 	type INodeType,
 	type INodeTypeDescription,
 	type ITriggerFunctions,
 	type ITriggerResponse,
 	type INodePropertyOptions,
-	NodeOperationError,
-	NodeConnectionType,
 } from 'n8n-workflow';
 import { options } from './DiscordTrigger.node.options';
 import bot from '../bot';
@@ -82,147 +82,154 @@ export class DiscordTrigger implements INodeType {
 	};
 
 	async trigger(this: ITriggerFunctions): Promise<ITriggerResponse> {
-		const credentials = (await this.getCredentials('discordBotTriggerApi').catch(
-			(e) => e,
-		)) as any as ICredentials;
-
-		if (!credentials?.token) {
-			console.log('No token given.');
-
-			return {};
+		let credentials: ICredentials;
+		try {
+			credentials = (await this.getCredentials('discordBotTriggerApi')) as ICredentials;
+			if (!credentials?.token) {
+				throw new NodeOperationError(this.getNode(), 'No token provided in credentials.');
+			}
+		} catch (error) {
+			// If credentials node does not exist or there's an issue fetching them
+			if (error instanceof NodeOperationError) {
+				throw error;
+			}
+			// Include original error message in the new error
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			throw new NodeOperationError(this.getNode(), `Error fetching credentials: ${errorMessage}`);
 		}
 
-		await connection(credentials).catch((e) => e);
-
-		// Connect to the correct IPC server ID
-		ipc.connectTo('discord-bot-server', () => {
-			console.log('Connected to IPC server (discord-bot-server)');
-
-			// Use the correct server reference
-			const server = ipc.of['discord-bot-server'];
-			if (!server) {
-				console.error('Failed to get IPC server reference (discord-bot-server)');
-				// Optionally handle error, maybe reject or return empty
-				return;
-			}
-
-			const parameters: any = {};
-			Object.keys(this.getNode().parameters).forEach((key) => {
-				parameters[key] = this.getNodeParameter(key, '') as any;
-			});
-
-			console.log('registering ', this.getNode().id, '... ', parameters);
-
-			// Emit using the correct server reference
-			server.emit('triggerNodeRegistered', {
-				parameters,
-				active: this.getWorkflow().active,
-				credentials,
-				nodeId: this.getNode().id, // Unique to each node
-			});
-
-			// Listen using the correct server reference
-			server.on(
-				'messageCreate',
-				({ message, author, guild, nodeId, messageReference, referenceAuthor }: any) => {
-					if (this.getNode().id === nodeId) {
-						const messageCreateOptions = {
-							id: message.id,
-							content: message.content,
-							guildId: guild?.id,
-							channelId: message.channelId,
-							authorId: author.id,
-							authorName: author.username,
-							timestamp: message.createdTimestamp,
-							listenValue: this.getNodeParameter('value', ''),
-							authorIsBot: author.bot || author.system,
-							referenceId: null,
-							referenceContent: null,
-							referenceAuthorId: null,
-							referenceAuthorName: null,
-							referenceTimestamp: null,
-						};
-
-						if (messageReference) {
-							messageCreateOptions.referenceId = messageReference.id;
-							messageCreateOptions.referenceContent = messageReference.content;
-							messageCreateOptions.referenceAuthorId = referenceAuthor.id;
-							messageCreateOptions.referenceAuthorName = referenceAuthor.username;
-							messageCreateOptions.referenceTimestamp = messageReference.createdTimestamp;
-						}
-
-						this.emit([this.helpers.returnJsonArray(messageCreateOptions)]);
-					}
-				},
+		try {
+			console.log(`Attempting to establish Discord connection for node ${this.getNode().id}...`);
+			await connection(credentials); // Assuming connection handles its own logging/errors internally or throws
+			console.log(`Discord connection established for node ${this.getNode().id}.`);
+		} catch (error) {
+			// Include original error message in the new error
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			throw new NodeOperationError(
+				this.getNode(),
+				`Failed to establish Discord connection: ${errorMessage}`,
 			);
+		}
 
-			// Listen using the correct server reference
-			server.on('guildMemberAdd', ({ guildMember, guild, user, nodeId }) => {
-				if (this.getNode().id === nodeId) {
-					this.emit([this.helpers.returnJsonArray(guildMember)]);
-				}
+		// Wrap IPC connection in a Promise
+		return new Promise<ITriggerResponse>((resolve, reject) => {
+			const nodeId = this.getNode().id;
+			const triggerParameters: any = {};
+			Object.keys(this.getNode().parameters).forEach((key) => {
+				triggerParameters[key] = this.getNodeParameter(key, '') as any;
 			});
 
-			// Listen using the correct server reference
-			server.on('guildMemberRemove', ({ guildMember, guild, user, nodeId }) => {
-				if (this.getNode().id === nodeId) {
-					this.emit([this.helpers.returnJsonArray(guildMember)]);
-				}
-			});
+			console.log(`Attempting to connect to IPC server 'discord-bot-server' for node ${nodeId}...`);
+			ipc.config.stopRetrying = false; // Allow retries
+			ipc.config.maxRetries = 3;
+			ipc.config.silent = false; // Make IPC less silent for debugging
 
-			// Listen using the correct server reference
-			server.on('roleCreate', ({ role, guild, nodeId }) => {
-				if (this.getNode().id === nodeId) {
-					this.emit([this.helpers.returnJsonArray(role)]);
-				}
-			});
+			// ---> ADDED LOG <---
+			console.log(`[Node ${nodeId}] Initiating ipc.connectTo('discord-bot-server')...`);
 
-			// Listen using the correct server reference
-			server.on('roleDelete', ({ role, guild, nodeId }) => {
-				if (this.getNode().id === nodeId) {
-					this.emit([this.helpers.returnJsonArray(role)]);
-				}
-			});
+			// Connect to the IPC server
+			ipc.connectTo('discord-bot-server', () => {
+				// ---> ADDED LOG <---
+				console.log(`[Node ${nodeId}] ipc.connectTo callback executed.`);
 
-			// Listen using the correct server reference
-			server.on('roleUpdate', ({ oldRole, newRole, guild, nodeId }) => {
-				if (this.getNode().id === nodeId) {
-					const addPrefix = (obj: any, prefix: string) =>
-						Object.fromEntries(
-							Object.entries(obj).map(([key, value]) => [
-								`${prefix}${key.charAt(0).toUpperCase()}${key.slice(1)}`,
-								value,
-							]),
-						);
+				ipc.of['discord-bot-server'].on('connect', () => {
+					console.log(
+						`[Node ${nodeId}] Connected to IPC server 'discord-bot-server'. Setting up listeners and registering.`,
+					);
+					this.ipcConnected = true;
 
-					const mergedRoleOptions: any = {
-						...addPrefix(oldRole, 'old'),
-						...addPrefix(newRole, 'new'),
+					// Register the node with the bot process
+					const registrationData = {
+						nodeId: nodeId,
+						credentials: botCredentials,
+						parameters: triggerParameters,
 					};
+					// ---> ADDED LOG <---
+					console.log(
+						`[Node ${nodeId}] Emitting triggerNodeRegistered with data:`,
+						registrationData,
+					);
+					ipc.of['discord-bot-server'].emit('triggerNodeRegistered', registrationData);
+					// ---> ADDED LOG <---
+					console.log(`[Node ${nodeId}] triggerNodeRegistered emitted.`);
 
-					this.emit([this.helpers.returnJsonArray(mergedRoleOptions)]);
+					// Setup listeners for events from the bot process
+					this.setupIpcListeners(ipc, nodeId, triggerParameters, pushData);
+				});
+
+				ipc.of['discord-bot-server'].on('disconnect', () => {
+					console.log(`[Node ${nodeId}] Disconnected from IPC server 'discord-bot-server'.`);
+					this.ipcConnected = false;
+					// Optionally handle reconnection logic here if needed
+				});
+
+				ipc.of['discord-bot-server'].on('error', (error: any) => {
+					console.error(`[Node ${nodeId}] IPC Error:`, error);
+					this.ipcConnected = false;
+					// Handle error appropriately, maybe reject the promise
+				});
+
+				// ---> ADDED: More specific error listener directly on the socket object <---
+				if (ipc.of['discord-bot-server']?.socket) {
+					ipc.of['discord-bot-server'].socket.on('error', (socketError: any) => {
+						console.error(`[Node ${nodeId}] IPC Socket Error:`, socketError);
+						this.ipcConnected = false;
+						// Reject the promise if the connection fails critically
+						reject(
+							new NodeOperationError(
+								this.getNode(),
+								`IPC Socket Error: ${socketError.message || socketError}`,
+							),
+						);
+					});
+				} else {
+					console.warn(
+						`[Node ${nodeId}] IPC socket object not immediately available after connectTo callback.`,
+					);
 				}
 			});
-		});
 
-		// Listen for disconnect on the correct server ID
-		ipc.of['discord-bot-server']?.on('disconnect', () => {
-			// Added optional chaining for safety
-			console.error('Disconnected from IPC server (discord-bot-server)');
-		});
-
-		// Return the cleanup function
-		return {
-			closeFunction: async () => {
-				// Disconnect from the correct server ID
-				ipc.disconnect('discord-bot-server');
-				console.log(`IPC disconnected for node ${this.getNode().id}`);
-				// Also inform the server to remove the node registration
-				const server = ipc.of['discord-bot-server'];
-				if (server) {
-					server.emit('triggerNodeRemoved', { nodeId: this.getNode().id });
+			// ---> ADDED: Listener for 'error' event on the IPC client itself <---
+			ipc.of['discord-bot-server']?.on('error', (clientError: any) => {
+				console.error(`[Node ${nodeId}] IPC Client Error (early listener):`, clientError);
+				// This might catch errors happening before the 'connect' event
+				if (!this.ipcConnected) {
+					// Only reject if we haven't successfully connected yet
+					reject(
+						new NodeOperationError(
+							this.getNode(),
+							`IPC Client Error: ${clientError.message || clientError}`,
+						),
+					);
 				}
-			},
-		};
+			});
+
+			// Handle potential connection errors during the initial connection attempt
+			// Need to access the socket instance potentially before the connectTo callback fires
+			// This might be tricky with node-ipc, let's rely on the error handler inside connectTo for now
+			// or check if ipc.of['discord-bot-server'] exists and attach error handler immediately.
+			const potentialServer = ipc.of['discord-bot-server'];
+			if (potentialServer) {
+				potentialServer.on('error', (err: any) => {
+					if (!potentialServer.socket.connecting && !potentialServer.socket.writable) {
+						console.error(
+							`[Node ${this.getNode().id}] Initial IPC connection failed or errored early:`,
+							err,
+						);
+						// Include original error message in the new error
+						const errorMessage = err instanceof Error ? err.message : String(err);
+						reject(
+							new NodeOperationError(
+								this.getNode(),
+								`Failed to connect to IPC server: ${errorMessage}`,
+							),
+						);
+					}
+				});
+			} else {
+				// If the server object isn't even available yet, we might need a different approach
+				// For now, the error handling within the connectTo callback is the primary mechanism.
+			}
+		});
 	}
 }
